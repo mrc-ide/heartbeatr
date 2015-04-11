@@ -6,12 +6,11 @@
 
 // I don't like using these globals, but this is something that only
 // exists once...
-bool global_keep_alive_status = false;
-std::string global_keep_alive_key;
+bool global_heartbeat_status = false;
+std::string global_heartbeat_key;
 
-#define EXPIRE_MULT 3
-
-struct keep_alive {
+class heartbeat {
+public:
   redisContext *con;
   std::string host;
   int port;
@@ -21,8 +20,8 @@ struct keep_alive {
   std::vector<std::string> cmd_set;
   std::vector<std::string> cmd_alive;
 
-  keep_alive(std::string host_, int port_, std::string key_,
-             int timeout_, int expire_)
+  heartbeat(std::string host_, int port_, std::string key_,
+            int timeout_, int expire_)
     : host(host_), port(port_), key(key_), timeout(timeout_), expire(expire_) {
     cmd_set.push_back("SET");
     cmd_set.push_back(key);
@@ -31,7 +30,7 @@ struct keep_alive {
     cmd_alive.push_back(key);
     cmd_alive.push_back(std::to_string(expire));
   }
-  ~keep_alive() {
+  ~heartbeat() {
     if (con != NULL) {
       disconnect();
     }
@@ -68,12 +67,12 @@ struct keep_alive {
   }
 private:
   // add the copy constructor here to make this non copyable.
-  keep_alive(const keep_alive&);                 // Prevent copy-construction
-  keep_alive& operator=(const keep_alive&);      // Prevent assignment
+  heartbeat(const heartbeat&);                 // Prevent copy-construction
+  heartbeat& operator=(const heartbeat&);      // Prevent assignment
 };
 
-void redis_keep_alive_worker(void * data) {
-  keep_alive *r = static_cast<keep_alive*>(data);
+void redis_heartbeat_worker(void * data) {
+  heartbeat *r = static_cast<heartbeat*>(data);
   const int timeout = r->timeout;
 
   // First, try and connect to the database
@@ -81,14 +80,14 @@ void redis_keep_alive_worker(void * data) {
   // Then try and set the key
   r->set();
   // Now we're good to go so set the globals
-  global_keep_alive_status = true;
-  global_keep_alive_key    = r->key;
+  global_heartbeat_status = true;
+  global_heartbeat_key    = r->key;
 
   // Round and round we go
   do {
     r->alive();
     tthread::this_thread::sleep_for(tthread::chrono::seconds(timeout));
-  } while (global_keep_alive_status);
+  } while (global_heartbeat_status);
 
   r->disconnect();
   delete r;
@@ -96,22 +95,22 @@ void redis_keep_alive_worker(void * data) {
 
 // R interface:
 // [[Rcpp::export]]
-void keep_alive_start(std::string host, int port,
+void heartbeat_start(std::string host, int port,
                       std::string key, int timeout, int expire) {
-  keep_alive * data = new keep_alive(host, port, key, timeout, expire);
-  tthread::thread t(redis_keep_alive_worker, data);
+  heartbeat * data = new heartbeat(host, port, key, timeout, expire);
+  tthread::thread t(redis_heartbeat_worker, data);
   t.detach();
 }
 // [[Rcpp::export]]
-void keep_alive_stop() {
+void heartbeat_stop() {
   // TODO: should we delete the key here perhaps?
-  global_keep_alive_status = false;
+  global_heartbeat_status = false;
 }
 // [[Rcpp::export]]
-bool keep_alive_status() {
-  return global_keep_alive_status;
+bool heartbeat_status() {
+  return global_heartbeat_status;
 }
 // [[Rcpp::export]]
-std::string keep_alive_key() {
-  return global_keep_alive_key;
+std::string heartbeat_key() {
+  return global_heartbeat_key;
 }

@@ -1,4 +1,4 @@
 library(testthat)
-library(RedisKeepAlive)
+library(RedisHeartbeat)
 
-test_check("RedisKeepAlive")
+test_check("RedisHeartbeat")

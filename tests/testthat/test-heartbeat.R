@@ -1,7 +1,7 @@
-context("keep_alive")
+context("heartbeat")
 
-test_that("keep_alive", {
-  obj <- keep_alive()
+test_that("heartbeat", {
+  obj <- heartbeat()
   key <- "mykey"
   timeout <- 1
   expire <- 2

@@ -5,9 +5,9 @@
 
 using namespace Rcpp;
 
-// keep_alive_start
-void keep_alive_start(std::string host, int port, std::string key, int timeout, int expire);
-RcppExport SEXP RedisKeepAlive_keep_alive_start(SEXP hostSEXP, SEXP portSEXP, SEXP keySEXP, SEXP timeoutSEXP, SEXP expireSEXP) {
+// heartbeat_start
+void heartbeat_start(std::string host, int port, std::string key, int timeout, int expire);
+RcppExport SEXP RedisHeartbeat_heartbeat_start(SEXP hostSEXP, SEXP portSEXP, SEXP keySEXP, SEXP timeoutSEXP, SEXP expireSEXP) {
 BEGIN_RCPP
     {
         Rcpp::RNGScope __rngScope;
@@ -16,44 +16,44 @@ BEGIN_RCPP
         Rcpp::traits::input_parameter< std::string >::type key(keySEXP );
         Rcpp::traits::input_parameter< int >::type timeout(timeoutSEXP );
         Rcpp::traits::input_parameter< int >::type expire(expireSEXP );
-        keep_alive_start(host, port, key, timeout, expire);
+        heartbeat_start(host, port, key, timeout, expire);
     }
     return R_NilValue;
 END_RCPP
 }
-// keep_alive_stop
-void keep_alive_stop();
-RcppExport SEXP RedisKeepAlive_keep_alive_stop() {
+// heartbeat_stop
+void heartbeat_stop();
+RcppExport SEXP RedisHeartbeat_heartbeat_stop() {
 BEGIN_RCPP
     {
         Rcpp::RNGScope __rngScope;
-        keep_alive_stop();
+        heartbeat_stop();
     }
     return R_NilValue;
 END_RCPP
 }
-// keep_alive_status
-bool keep_alive_status();
-RcppExport SEXP RedisKeepAlive_keep_alive_status() {
+// heartbeat_status
+bool heartbeat_status();
+RcppExport SEXP RedisHeartbeat_heartbeat_status() {
 BEGIN_RCPP
     SEXP __sexp_result;
     {
         Rcpp::RNGScope __rngScope;
-        bool __result = keep_alive_status();
+        bool __result = heartbeat_status();
         PROTECT(__sexp_result = Rcpp::wrap(__result));
     }
     UNPROTECT(1);
     return __sexp_result;
 END_RCPP
 }
-// keep_alive_key
-std::string keep_alive_key();
-RcppExport SEXP RedisKeepAlive_keep_alive_key() {
+// heartbeat_key
+std::string heartbeat_key();
+RcppExport SEXP RedisHeartbeat_heartbeat_key() {
 BEGIN_RCPP
     SEXP __sexp_result;
     {
         Rcpp::RNGScope __rngScope;
-        std::string __result = keep_alive_key();
+        std::string __result = heartbeat_key();
         PROTECT(__sexp_result = Rcpp::wrap(__result));
     }
     UNPROTECT(1);

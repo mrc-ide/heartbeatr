@@ -1,4 +1,4 @@
-# RedisKeepAlive
+# RedisHeartbeat
 
 This only exists as a separate package so that `rrqueue` remains easy to install; eventually this will fold into one of the Redis packages or into `rrqueue`.
 
@@ -20,9 +20,9 @@ This uses the [tiny thread](http://tinythreadpp.bitsnbites.eu/) library, followi
 
 ```r
 f <- function() {
-  ka <- keep_alive()
-  ka$start("mykey", 4)
+  h <- heartbeat()
+  h$start("mykey", 4)
   # ... long running job here
-  ka$stop() # optional - will stop once ka is garbage collected
+  h$stop() # optional - will stop once h is garbage collected
 }
 ```
