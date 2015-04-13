@@ -1,5 +1,7 @@
 # RedisHeartbeat
 
+[![Build Status](https://travis-ci.org/richfitz/RedisHeartbeat.png?branch=master)](https://travis-ci.org/richfitz/RedisHeartbeat)
+
 This only exists as a separate package so that `rrqueue` remains easy to install; eventually this will fold into one of the Redis packages or into `rrqueue`.
 
 ## Installation

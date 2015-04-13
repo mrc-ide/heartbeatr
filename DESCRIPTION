@@ -8,4 +8,4 @@ License: BSD_2_clause + file LICENSE
 LinkingTo: Rcpp
 SystemDepends: libhiredis
 Imports: Rcpp, R6
-Suggests: testthat, RcppRedis, rrlite
+Suggests: testthat, RedisAPI, RcppRedis

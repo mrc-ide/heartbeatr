@@ -6,12 +6,13 @@ test_that("heartbeat", {
   timeout <- 1
   expire <- 2
 
-  con <- rrlite::hiredis()
+  con <- RedisAPI::hiredis()
   expect_that(con$EXISTS(key), equals(0))
   on.exit(con$DEL(key))
   expect_that(obj$is_running(), is_false())
 
   obj$start(key, timeout, expire)
+  Sys.sleep(0.5)
   expect_that(con$EXISTS(key), equals(1))
   ttl <- con$TTL(key)
   expect_that(ttl, is_more_than(timeout - expire))
