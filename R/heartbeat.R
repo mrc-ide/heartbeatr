@@ -15,7 +15,6 @@
 
     is_running=function() {
       heartbeat_status()
-      invisible(self)
     },
 
     start=function(key, timeout, expire=timeout * 3) {
@@ -23,12 +22,10 @@
         stop("Already running on key ", heartbeat_key())
       }
       heartbeat_start(self$host, self$port, key, timeout, expire)
-      invisible(self)
     },
 
     stop=function() {
       heartbeat_stop()
-      invisible(self)
     }))
 
 ##' Create a heartbeat instance.  This can be used by running
