@@ -22,9 +22,8 @@ This uses the [tiny thread](http://tinythreadpp.bitsnbites.eu/) library, followi
 
 ```r
 f <- function() {
-  h <- heartbeat()
-  h$start("mykey", 4)
+  h <- heartbeat("mykey", 4)
   # ... long running job here
-  h$stop() # optional - will stop once h is garbage collected
+  # h$stop() # optional - will stop automatically once h is garbage collected
 }
 ```
