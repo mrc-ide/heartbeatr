@@ -13,6 +13,8 @@
 // object lifetimes which is kind of cool.
 //
 // Another option is a global hash by key?
+//   Create a heartbeat and set the hash
+//   turn it off by setting the hash to false
 bool global_heartbeat_status = false;
 std::string global_heartbeat_key;
 
@@ -22,21 +24,24 @@ public:
   std::string host;
   int port;
   std::string key;
-  int timeout;
+  int period;
   int expire;
   std::vector<std::string> cmd_set;
   std::vector<std::string> cmd_alive;
+  std::vector<std::string> cmd_del;
 
   heartbeat(std::string host_, int port_,
             std::string key_, std::string value_,
-            int timeout_, int expire_)
-    : host(host_), port(port_), key(key_), timeout(timeout_), expire(expire_) {
+            int period_, int expire_)
+    : host(host_), port(port_), key(key_), period(period_), expire(expire_) {
     cmd_set.push_back("SET");
     cmd_set.push_back(key_);
     cmd_set.push_back(value_);
     cmd_alive.push_back("EXPIRE");
     cmd_alive.push_back(key);
     cmd_alive.push_back(std::to_string(expire));
+    cmd_del.push_back("DEL");
+    cmd_del.push_back(key_);
   }
   ~heartbeat() {
     if (con != NULL) {
@@ -73,6 +78,9 @@ public:
   void alive() {
     run_redis(cmd_alive);
   }
+  void del() {
+    run_redis(cmd_del);
+  }
 private:
   // add the copy constructor here to make this non copyable.
   heartbeat(const heartbeat&);                 // Prevent copy-construction
@@ -81,21 +89,25 @@ private:
 
 void redis_heartbeat_worker(void * data) {
   heartbeat *r = static_cast<heartbeat*>(data);
-  const int timeout = r->timeout;
+  const int period = r->period;
 
   // First, try and connect to the database
   r->connect();
   // Then try and set the key
   r->set();
-  // Now we're good to go so set the globals
-  global_heartbeat_status = true;
-  global_heartbeat_key    = r->key;
 
-  // Round and round we go
-  do {
-    r->alive();
-    tthread::this_thread::sleep_for(tthread::chrono::seconds(timeout));
-  } while (global_heartbeat_status);
+  if (period > 0) {
+    // Now we're good to go so set the globals
+    global_heartbeat_status = true;
+    global_heartbeat_key    = r->key;
+
+    // Round and round we go
+    do {
+      r->alive();
+      tthread::this_thread::sleep_for(tthread::chrono::seconds(period));
+    } while (global_heartbeat_status);
+    r->del();
+  }
 
   r->disconnect();
   delete r;
@@ -105,14 +117,13 @@ void redis_heartbeat_worker(void * data) {
 // [[Rcpp::export]]
 void heartbeat_start(std::string host, int port,
                      std::string key, std::string value,
-                     int timeout, int expire) {
-  heartbeat * data = new heartbeat(host, port, key, value, timeout, expire);
+                     int period, int expire) {
+  heartbeat * data = new heartbeat(host, port, key, value, period, expire);
   tthread::thread t(redis_heartbeat_worker, data);
   t.detach();
 }
 // [[Rcpp::export]]
 void heartbeat_stop() {
-  // TODO: should we delete the key here perhaps?
   global_heartbeat_status = false;
 }
 // [[Rcpp::export]]
@@ -122,4 +133,12 @@ bool heartbeat_status() {
 // [[Rcpp::export]]
 std::string heartbeat_key() {
   return global_heartbeat_key;
+}
+
+// [[Rcpp::export]]
+void heartbeat_cleanup(std::string host, int port, std::string key) {
+  heartbeat data(host, port, key, "", 0, 0);
+  data.connect();
+  data.del();
+  data.disconnect();
 }

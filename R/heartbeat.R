@@ -14,7 +14,7 @@
 
     initialize=function(host, port, key, value, period, expire) {
       #
-      if (expire <= period) {
+      if (expire <= period && period > 0) {
         stop("expire must be longer than period")
       }
       self$host   <- host
@@ -42,7 +42,11 @@
     },
 
     stop=function() {
-      heartbeat_stop()
+      if (self$period > 0) {
+        heartbeat_stop()
+      } else {
+        heartbeat_cleanup(self$host, self$port, self$key)
+      }
     }))
 
 ##' Create a heartbeat instance.  This can be used by running
