@@ -4,22 +4,46 @@
 \alias{heartbeat}
 \title{Create a heartbeat instance}
 \usage{
-heartbeat(host = "127.0.0.1", port = 6379)
+heartbeat(key, period, expire = 3 * period, value = expire,
+  host = "127.0.0.1", port = 6379, start = TRUE)
 }
 \arguments{
+\item{key}{Key to use}
+
+\item{period}{Timeout period (in seconds)}
+
+\item{expire}{Key expiry time (in seconds)}
+
+\item{value}{Value to store in the key.  By default it stores the
+expiry time, so the time since last heartbeat can be computed.}
+
 \item{host}{Hostname}
 
 \item{port}{Port number}
+
+\item{start}{Should the heartbeat be started immediately?}
 }
 \description{
 Create a heartbeat instance.  This can be used by running
-\code{obj$start(key, timeout)} which will reset the TTL on
-\code{key} every \code{timeout} seconds (don't set this too high).
-If the R process dies, then the key will expire after \code{3 *
-timeout} seconds (or set \code{expire}) and another application can
-tell that this R instance has died.
+\code{obj$start()} which will reset the TTL on \code{key} every
+\code{period} seconds (don't set this too high).  If the R process
+dies, then the key will expire after \code{3 * period} seconds (or
+set \code{expire}) and another application can tell that this R
+instance has died.
 }
 \details{
+The heartbeat object has three methods:
+\itemize{
+
+\item \code{is_running()} which returns \code{TRUE} or \code{FALSE}
+if the heartbeat is/is not running.
+
+\item \code{start()} which starts a heartbeat
+
+\item \code{stop()} which stops the heartbeat
+
+}
+
 Heavily inspired by the \code{doRedis} package.
 }
 

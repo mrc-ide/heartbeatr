@@ -6,6 +6,13 @@
 
 // I don't like using these globals, but this is something that only
 // exists once...
+//
+// TODO: I think I can move to C++11 lambdas nicely here; it would be
+// useful to be able to easily associate heartbeats with different
+// things, even though R is single threaded - they can advertise
+// object lifetimes which is kind of cool.
+//
+// Another option is a global hash by key?
 bool global_heartbeat_status = false;
 std::string global_heartbeat_key;
 
@@ -20,12 +27,13 @@ public:
   std::vector<std::string> cmd_set;
   std::vector<std::string> cmd_alive;
 
-  heartbeat(std::string host_, int port_, std::string key_,
+  heartbeat(std::string host_, int port_,
+            std::string key_, std::string value_,
             int timeout_, int expire_)
     : host(host_), port(port_), key(key_), timeout(timeout_), expire(expire_) {
     cmd_set.push_back("SET");
-    cmd_set.push_back(key);
-    cmd_set.push_back("OK");
+    cmd_set.push_back(key_);
+    cmd_set.push_back(value_);
     cmd_alive.push_back("EXPIRE");
     cmd_alive.push_back(key);
     cmd_alive.push_back(std::to_string(expire));
@@ -46,7 +54,7 @@ public:
     redisFree(con);
     con = NULL;
   }
-  void run(const std::vector<std::string>& cmd) {
+  void run_redis(const std::vector<std::string>& cmd) {
     // TODO: cache all this stuff at the beginning I think; it doesn't
     // change.
     std::vector<const char*> cmdv(cmd.size());
@@ -60,10 +68,10 @@ public:
     freeReplyObject(reply);
   }
   void set() {
-    run(cmd_set);
+    run_redis(cmd_set);
   }
   void alive() {
-    run(cmd_alive);
+    run_redis(cmd_alive);
   }
 private:
   // add the copy constructor here to make this non copyable.
@@ -96,8 +104,9 @@ void redis_heartbeat_worker(void * data) {
 // R interface:
 // [[Rcpp::export]]
 void heartbeat_start(std::string host, int port,
-                      std::string key, int timeout, int expire) {
-  heartbeat * data = new heartbeat(host, port, key, timeout, expire);
+                     std::string key, std::string value,
+                     int timeout, int expire) {
+  heartbeat * data = new heartbeat(host, port, key, value, timeout, expire);
   tthread::thread t(redis_heartbeat_worker, data);
   t.detach();
 }
