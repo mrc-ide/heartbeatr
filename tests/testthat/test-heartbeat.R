@@ -1,7 +1,7 @@
 context("heartbeat")
 
 test_that("heartbeat", {
-  key <- "mykey"
+  key <- "heartbeat_key"
   period <- 1
   expire <- 2
   obj <- heartbeat(key, period, expire=expire, start=FALSE)
