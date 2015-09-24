@@ -46,7 +46,7 @@ test_that("simple interface", {
   expect_that(obj$is_running(), is_true())
   rm(obj)
   gc()
-  Sys.sleep(0.5)
+  Sys.sleep(1)
   expect_that(con$EXISTS(key), equals(0))
 })
 
@@ -63,4 +63,35 @@ test_that("period zero does not enable heartbeat", {
   rm(obj)
   gc()
   expect_that(con$EXISTS(key), equals(0))
+})
+
+test_that("Send signals", {
+  key <- "heartbeat_key"
+  period <- 10
+  expire <- 20
+  con <- RedisAPI::hiredis()
+  on.exit(con$DEL(key))
+
+  obj <- heartbeat(key, period, expire=expire, start=TRUE)
+  Sys.sleep(0.5)
+  expect_that(con$EXISTS(key), equals(1))
+  expect_that(obj$is_running(), is_true())
+
+  idx <- 0
+  f <- function() {
+    for (i in 1:20) {
+      idx <<- i
+      if (i > 1) {
+        heartbeat_send_signal(obj$key, tools::SIGINT, con)
+      }
+      Sys.sleep(.1)
+    }
+    i
+  }
+
+  ans <- tryCatch(f(), interrupt=function(e) TRUE)
+  expect_that(ans, is_true())
+  expect_that(idx, not(is_less_than(1)))
+  expect_that(idx, is_less_than(10))
+  obj$stop()
 })

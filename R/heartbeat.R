@@ -87,3 +87,22 @@ heartbeat <- function(key, period, expire=3 * period, value=expire,
   }
   ret
 }
+
+##' Sends a signal to a hearbeat process that is using key \code{key}
+##' @title Send a signal
+##' @param key The heartbeat key
+##' @param signal A signal to send (e.g. \code{tools::SIGINT} or
+##'   \code{tools:::SIGKILL})
+##' @param con A Redis connection object, or \code{NULL} to construct one
+##'   from the \code{host}/\code{port} combination.
+##' @param host Redis host
+##' @param port Redis port
+##' @export
+##' @importFrom RedisAPI hiredis
+heartbeat_send_signal <- function(key, signal, con=NULL,
+                                  host="127.0.0.1", port=6379) {
+  if (is.null(con)) {
+    con <- RedisAPI::hiredis(host, port)
+  }
+  con$RPUSH(heartbeat_signal_key(key), signal)
+}

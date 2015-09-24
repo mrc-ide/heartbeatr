@@ -9,16 +9,14 @@ using namespace Rcpp;
 void heartbeat_start(std::string host, int port, std::string key, std::string value, int period, int expire);
 RcppExport SEXP RedisHeartbeat_heartbeat_start(SEXP hostSEXP, SEXP portSEXP, SEXP keySEXP, SEXP valueSEXP, SEXP periodSEXP, SEXP expireSEXP) {
 BEGIN_RCPP
-    {
-        Rcpp::RNGScope __rngScope;
-        Rcpp::traits::input_parameter< std::string >::type host(hostSEXP );
-        Rcpp::traits::input_parameter< int >::type port(portSEXP );
-        Rcpp::traits::input_parameter< std::string >::type key(keySEXP );
-        Rcpp::traits::input_parameter< std::string >::type value(valueSEXP );
-        Rcpp::traits::input_parameter< int >::type period(periodSEXP );
-        Rcpp::traits::input_parameter< int >::type expire(expireSEXP );
-        heartbeat_start(host, port, key, value, period, expire);
-    }
+    Rcpp::RNGScope __rngScope;
+    Rcpp::traits::input_parameter< std::string >::type host(hostSEXP);
+    Rcpp::traits::input_parameter< int >::type port(portSEXP);
+    Rcpp::traits::input_parameter< std::string >::type key(keySEXP);
+    Rcpp::traits::input_parameter< std::string >::type value(valueSEXP);
+    Rcpp::traits::input_parameter< int >::type period(periodSEXP);
+    Rcpp::traits::input_parameter< int >::type expire(expireSEXP);
+    heartbeat_start(host, port, key, value, period, expire);
     return R_NilValue;
 END_RCPP
 }
@@ -26,10 +24,8 @@ END_RCPP
 void heartbeat_stop();
 RcppExport SEXP RedisHeartbeat_heartbeat_stop() {
 BEGIN_RCPP
-    {
-        Rcpp::RNGScope __rngScope;
-        heartbeat_stop();
-    }
+    Rcpp::RNGScope __rngScope;
+    heartbeat_stop();
     return R_NilValue;
 END_RCPP
 }
@@ -37,41 +33,42 @@ END_RCPP
 bool heartbeat_status();
 RcppExport SEXP RedisHeartbeat_heartbeat_status() {
 BEGIN_RCPP
-    SEXP __sexp_result;
-    {
-        Rcpp::RNGScope __rngScope;
-        bool __result = heartbeat_status();
-        PROTECT(__sexp_result = Rcpp::wrap(__result));
-    }
-    UNPROTECT(1);
-    return __sexp_result;
+    Rcpp::RObject __result;
+    Rcpp::RNGScope __rngScope;
+    __result = Rcpp::wrap(heartbeat_status());
+    return __result;
 END_RCPP
 }
 // heartbeat_key
 std::string heartbeat_key();
 RcppExport SEXP RedisHeartbeat_heartbeat_key() {
 BEGIN_RCPP
-    SEXP __sexp_result;
-    {
-        Rcpp::RNGScope __rngScope;
-        std::string __result = heartbeat_key();
-        PROTECT(__sexp_result = Rcpp::wrap(__result));
-    }
-    UNPROTECT(1);
-    return __sexp_result;
+    Rcpp::RObject __result;
+    Rcpp::RNGScope __rngScope;
+    __result = Rcpp::wrap(heartbeat_key());
+    return __result;
+END_RCPP
+}
+// heartbeat_signal_key
+std::string heartbeat_signal_key(std::string key);
+RcppExport SEXP RedisHeartbeat_heartbeat_signal_key(SEXP keySEXP) {
+BEGIN_RCPP
+    Rcpp::RObject __result;
+    Rcpp::RNGScope __rngScope;
+    Rcpp::traits::input_parameter< std::string >::type key(keySEXP);
+    __result = Rcpp::wrap(heartbeat_signal_key(key));
+    return __result;
 END_RCPP
 }
 // heartbeat_cleanup
 void heartbeat_cleanup(std::string host, int port, std::string key);
 RcppExport SEXP RedisHeartbeat_heartbeat_cleanup(SEXP hostSEXP, SEXP portSEXP, SEXP keySEXP) {
 BEGIN_RCPP
-    {
-        Rcpp::RNGScope __rngScope;
-        Rcpp::traits::input_parameter< std::string >::type host(hostSEXP );
-        Rcpp::traits::input_parameter< int >::type port(portSEXP );
-        Rcpp::traits::input_parameter< std::string >::type key(keySEXP );
-        heartbeat_cleanup(host, port, key);
-    }
+    Rcpp::RNGScope __rngScope;
+    Rcpp::traits::input_parameter< std::string >::type host(hostSEXP);
+    Rcpp::traits::input_parameter< int >::type port(portSEXP);
+    Rcpp::traits::input_parameter< std::string >::type key(keySEXP);
+    heartbeat_cleanup(host, port, key);
     return R_NilValue;
 END_RCPP
 }

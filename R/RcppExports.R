@@ -17,6 +17,10 @@ heartbeat_key <- function() {
     .Call('RedisHeartbeat_heartbeat_key', PACKAGE = 'RedisHeartbeat')
 }
 
+heartbeat_signal_key <- function(key) {
+    .Call('RedisHeartbeat_heartbeat_signal_key', PACKAGE = 'RedisHeartbeat', key)
+}
+
 heartbeat_cleanup <- function(host, port, key) {
     invisible(.Call('RedisHeartbeat_heartbeat_cleanup', PACKAGE = 'RedisHeartbeat', host, port, key))
 }

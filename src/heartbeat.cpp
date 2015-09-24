@@ -4,6 +4,8 @@
 // reason, but we do need a proper Redis client really.
 #include <hiredis/hiredis.h>
 
+std::string heartbeat_signal_key(std::string key);
+
 // I don't like using these globals, but this is something that only
 // exists once...
 //
@@ -24,16 +26,20 @@ public:
   std::string host;
   int port;
   std::string key;
+  std::string key_signal;
   int period;
   int expire;
   std::vector<std::string> cmd_set;
   std::vector<std::string> cmd_alive;
   std::vector<std::string> cmd_del;
+  std::vector<std::string> cmd_blpop;
 
   heartbeat(std::string host_, int port_,
             std::string key_, std::string value_,
             int period_, int expire_)
-    : host(host_), port(port_), key(key_), period(period_), expire(expire_) {
+    : host(host_), port(port_),
+      key(key_), key_signal(heartbeat_signal_key(key)),
+      period(period_), expire(expire_) {
     cmd_set.push_back("SET");
     cmd_set.push_back(key_);
     cmd_set.push_back(value_);
@@ -42,6 +48,9 @@ public:
     cmd_alive.push_back(std::to_string(expire));
     cmd_del.push_back("DEL");
     cmd_del.push_back(key_);
+    cmd_blpop.push_back("BLPOP");
+    cmd_blpop.push_back(key_signal);
+    cmd_blpop.push_back(std::to_string(period));
   }
   ~heartbeat() {
     if (con != NULL) {
@@ -59,7 +68,8 @@ public:
     redisFree(con);
     con = NULL;
   }
-  void run_redis(const std::vector<std::string>& cmd) {
+  int run_redis(const std::vector<std::string>& cmd) {
+    int ret = 0;
     // TODO: cache all this stuff at the beginning I think; it doesn't
     // change.
     std::vector<const char*> cmdv(cmd.size());
@@ -70,7 +80,11 @@ public:
     }
     redisReply *reply = static_cast<redisReply*>
       (redisCommandArgv(con, cmd.size(), &(cmdv[0]), &(cmdlen[0])));
+    if (reply->type == REDIS_REPLY_ARRAY && reply->elements == 2) { // blpop
+      ret = atoi(reply->element[1]->str);
+    }
     freeReplyObject(reply);
+    return ret;
   }
   void set() {
     run_redis(cmd_set);
@@ -81,12 +95,16 @@ public:
   void del() {
     run_redis(cmd_del);
   }
+  int blpop() {
+    return run_redis(cmd_blpop);
+  }
 private:
   // add the copy constructor here to make this non copyable.
   heartbeat(const heartbeat&);                 // Prevent copy-construction
   heartbeat& operator=(const heartbeat&);      // Prevent assignment
 };
 
+// This is working on a thread so there's no access to R API things.
 void redis_heartbeat_worker(void * data) {
   heartbeat *r = static_cast<heartbeat*>(data);
   const int period = r->period;
@@ -104,7 +122,13 @@ void redis_heartbeat_worker(void * data) {
     // Round and round we go
     do {
       r->alive();
-      tthread::this_thread::sleep_for(tthread::chrono::seconds(period));
+      // tthread::this_thread::sleep_for(tthread::chrono::seconds(period));
+      int signal = r->blpop();
+      if (signal > 0) {
+        char *name = strsignal(signal);
+        REprintf("Heartbeat sending signal %s\n", name);
+        kill(getpid(), signal);
+      }
     } while (global_heartbeat_status);
     r->del();
   }
@@ -133,6 +157,10 @@ bool heartbeat_status() {
 // [[Rcpp::export]]
 std::string heartbeat_key() {
   return global_heartbeat_key;
+}
+// [[Rcpp::export]]
+std::string heartbeat_signal_key(std::string key) {
+  return key + ":signal";
 }
 
 // [[Rcpp::export]]
