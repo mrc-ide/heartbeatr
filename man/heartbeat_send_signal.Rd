@@ -11,7 +11,7 @@ heartbeat_send_signal(key, signal, con = NULL, host = "127.0.0.1",
 \item{key}{The heartbeat key}
 
 \item{signal}{A signal to send (e.g. \code{tools::SIGINT} or
-\code{tools:::SIGKILL})}
+\code{tools::SIGKILL})}
 
 \item{con}{A Redis connection object, or \code{NULL} to construct one
 from the \code{host}/\code{port} combination.}
