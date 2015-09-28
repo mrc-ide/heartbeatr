@@ -5,6 +5,15 @@
 #include <hiredis/hiredis.h>
 
 std::string heartbeat_signal_key(std::string key);
+// This would be better done with C++11 std::to_string()
+template<typename T>
+std::string to_string(T x) {
+  std::ostringstream o;
+  if (!(o << x)) {
+    stop("String conversion failure");
+  }
+  return o.str();
+}
 
 // I don't like using these globals, but this is something that only
 // exists once...
@@ -45,12 +54,12 @@ public:
     cmd_set.push_back(value_);
     cmd_alive.push_back("EXPIRE");
     cmd_alive.push_back(key);
-    cmd_alive.push_back(std::to_string(expire));
+    cmd_alive.push_back(to_string(expire));
     cmd_del.push_back("DEL");
     cmd_del.push_back(key_);
     cmd_blpop.push_back("BLPOP");
     cmd_blpop.push_back(key_signal);
-    cmd_blpop.push_back(std::to_string(period));
+    cmd_blpop.push_back(to_string(period));
   }
   ~heartbeat() {
     if (con != NULL) {
