@@ -10,7 +10,7 @@ template<typename T>
 std::string to_string(T x) {
   std::ostringstream o;
   if (!(o << x)) {
-    stop("String conversion failure");
+    Rcpp::stop("String conversion failure");
   }
   return o.str();
 }
