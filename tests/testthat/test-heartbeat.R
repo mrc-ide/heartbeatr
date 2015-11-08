@@ -35,9 +35,6 @@ test_that("heartbeat", {
 })
 
 test_that("simple interface", {
-  ## This works *fine* in devtools::test() so really not sure what
-  ## trick is being played here.
-  ## skip("crashes")#_on_cran()
   key <- "mykey2"
   period <- 1
   expire <- 2
@@ -85,7 +82,7 @@ test_that("Send signals", {
     for (i in 1:20) {
       idx <<- i
       if (i > 1) {
-        heartbeat_send_signal(obj$key, tools::SIGINT, con)
+        heartbeat_send_signal(con, obj$key, tools::SIGINT)
       }
       Sys.sleep(.1)
     }

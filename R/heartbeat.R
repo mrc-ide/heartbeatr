@@ -5,20 +5,18 @@
   "heartbeat",
 
   public=list(
-    host=NULL,
-    port=NULL,
+    config=NULL,
     key=NULL,
     period=NULL,
     expire=NULL,
     value=NULL,
 
-    initialize=function(host, port, key, value, period, expire) {
+    initialize=function(config, key, value, period, expire) {
       #
       if (expire <= period && period > 0) {
         stop("expire must be longer than period")
       }
-      self$host   <- host
-      self$port   <- port
+      self$config <- config
       self$key    <- as.character(key)
       self$period <- as.integer(period)
       self$expire <- as.integer(expire)
@@ -36,7 +34,7 @@
       if (self$is_running()) {
         stop("Already running on key ", heartbeat_key())
       }
-      heartbeat_start(self$host,   self$port,
+      heartbeat_start(self$config$host, self$config$port,
                       self$key,    self$value,
                       self$period, self$expire)
     },
@@ -45,7 +43,7 @@
       if (self$period > 0) {
         heartbeat_stop()
       } else {
-        heartbeat_cleanup(self$host, self$port, self$key)
+        heartbeat_cleanup(self$config$host, self$config$port, self$key)
       }
     }))
 
@@ -75,13 +73,13 @@
 ##' @param expire Key expiry time (in seconds)
 ##' @param value Value to store in the key.  By default it stores the
 ##' expiry time, so the time since last heartbeat can be computed.
-##' @param host Hostname
-##' @param port Port number
+##' @param config A \code{RedisAPI::redis_config} object.
 ##' @param start Should the heartbeat be started immediately?
+##' @importFrom RedisAPI redis_config
 ##' @export
 heartbeat <- function(key, period, expire=3 * period, value=expire,
-                      host="127.0.0.1", port=6379, start=TRUE) {
-  ret <- .R6_heartbeat$new(host, port, key, value, period, expire)
+                      config=RedisAPI::redis_config(), start=TRUE) {
+  ret <- .R6_heartbeat$new(config, key, value, period, expire)
   if (start) {
     ret$start()
   }
@@ -93,16 +91,9 @@ heartbeat <- function(key, period, expire=3 * period, value=expire,
 ##' @param key The heartbeat key
 ##' @param signal A signal to send (e.g. \code{tools::SIGINT} or
 ##'   \code{tools::SIGKILL})
-##' @param con A Redis connection object, or \code{NULL} to construct one
-##'   from the \code{host}/\code{port} combination.
-##' @param host Redis host
-##' @param port Redis port
+##' @param con A hiredis object
 ##' @export
-##' @importFrom RedisAPI hiredis
-heartbeat_send_signal <- function(key, signal, con=NULL,
-                                  host="127.0.0.1", port=6379) {
-  if (is.null(con)) {
-    con <- RedisAPI::hiredis(host, port)
-  }
+##' @importFrom redux hiredis
+heartbeat_send_signal <- function(con, key, signal) {
   con$RPUSH(heartbeat_signal_key(key), signal)
 }

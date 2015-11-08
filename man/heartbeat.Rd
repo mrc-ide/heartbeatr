@@ -5,7 +5,7 @@
 \title{Create a heartbeat instance}
 \usage{
 heartbeat(key, period, expire = 3 * period, value = expire,
-  host = "127.0.0.1", port = 6379, start = TRUE)
+  config = RedisAPI::redis_config(), start = TRUE)
 }
 \arguments{
 \item{key}{Key to use}
@@ -17,9 +17,7 @@ heartbeat(key, period, expire = 3 * period, value = expire,
 \item{value}{Value to store in the key.  By default it stores the
 expiry time, so the time since last heartbeat can be computed.}
 
-\item{host}{Hostname}
-
-\item{port}{Port number}
+\item{config}{A \code{RedisAPI::redis_config} object.}
 
 \item{start}{Should the heartbeat be started immediately?}
 }

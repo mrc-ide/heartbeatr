@@ -4,21 +4,15 @@
 \alias{heartbeat_send_signal}
 \title{Send a signal}
 \usage{
-heartbeat_send_signal(key, signal, con = NULL, host = "127.0.0.1",
-  port = 6379)
+heartbeat_send_signal(con, key, signal)
 }
 \arguments{
+\item{con}{A hiredis object}
+
 \item{key}{The heartbeat key}
 
 \item{signal}{A signal to send (e.g. \code{tools::SIGINT} or
 \code{tools::SIGKILL})}
-
-\item{con}{A Redis connection object, or \code{NULL} to construct one
-from the \code{host}/\code{port} combination.}
-
-\item{host}{Redis host}
-
-\item{port}{Redis port}
 }
 \description{
 Sends a signal to a hearbeat process that is using key \code{key}

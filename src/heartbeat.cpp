@@ -5,15 +5,6 @@
 #include <hiredis/hiredis.h>
 
 std::string heartbeat_signal_key(std::string key);
-// This would be better done with C++11 std::to_string()
-template<typename T>
-std::string to_string(T x) {
-  std::ostringstream o;
-  if (!(o << x)) {
-    Rcpp::stop("String conversion failure");
-  }
-  return o.str();
-}
 
 // I don't like using these globals, but this is something that only
 // exists once...
@@ -36,30 +27,16 @@ public:
   int port;
   std::string key;
   std::string key_signal;
+  std::string value;
   int period;
   int expire;
-  std::vector<std::string> cmd_set;
-  std::vector<std::string> cmd_alive;
-  std::vector<std::string> cmd_del;
-  std::vector<std::string> cmd_blpop;
 
   heartbeat(std::string host_, int port_,
             std::string key_, std::string value_,
             int period_, int expire_)
     : host(host_), port(port_),
-      key(key_), key_signal(heartbeat_signal_key(key)),
+      key(key_), key_signal(heartbeat_signal_key(key)), value(value_),
       period(period_), expire(expire_) {
-    cmd_set.push_back("SET");
-    cmd_set.push_back(key_);
-    cmd_set.push_back(value_);
-    cmd_alive.push_back("EXPIRE");
-    cmd_alive.push_back(key);
-    cmd_alive.push_back(to_string(expire));
-    cmd_del.push_back("DEL");
-    cmd_del.push_back(key_);
-    cmd_blpop.push_back("BLPOP");
-    cmd_blpop.push_back(key_signal);
-    cmd_blpop.push_back(to_string(period));
   }
   ~heartbeat() {
     if (con != NULL) {
@@ -77,35 +54,32 @@ public:
     redisFree(con);
     con = NULL;
   }
-  int run_redis(const std::vector<std::string>& cmd) {
-    int ret = 0;
-    // TODO: cache all this stuff at the beginning I think; it doesn't
-    // change.
-    std::vector<const char*> cmdv(cmd.size());
-    std::vector<size_t> cmdlen(cmd.size());
-    for (size_t i=0; i < cmd.size(); ++i) {
-      cmdv[i]   = cmd[i].c_str();
-      cmdlen[i] = cmd[i].size();
-    }
+  void set() {
     redisReply *reply = static_cast<redisReply*>
-      (redisCommandArgv(con, cmd.size(), &(cmdv[0]), &(cmdlen[0])));
-    if (reply->type == REDIS_REPLY_ARRAY && reply->elements == 2) { // blpop
+      (redisCommand(con, "SET %s %s", key.c_str(), value.c_str()));
+    freeReplyObject(reply);
+  }
+  void alive() {
+    redisReply *reply = static_cast<redisReply*>
+      (redisCommand(con, "EXPIRE %s %d", key.c_str(), expire));
+    freeReplyObject(reply);
+  }
+  void del() {
+    redisReply *reply = static_cast<redisReply*>
+      (redisCommand(con, "DEL %s", key.c_str()));
+    freeReplyObject(reply);
+  }
+  int blpop() {
+    redisReply *reply = static_cast<redisReply*>
+      (redisCommand(con, "BLPOP %s %d", key_signal.c_str(), period));
+    int ret = 0;
+    if (reply && // avoid connection error
+        reply->type == REDIS_REPLY_ARRAY &&
+        reply->elements == 2) {
       ret = atoi(reply->element[1]->str);
     }
     freeReplyObject(reply);
     return ret;
-  }
-  void set() {
-    run_redis(cmd_set);
-  }
-  void alive() {
-    run_redis(cmd_alive);
-  }
-  void del() {
-    run_redis(cmd_del);
-  }
-  int blpop() {
-    return run_redis(cmd_blpop);
   }
 private:
   // add the copy constructor here to make this non copyable.
