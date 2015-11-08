@@ -6,7 +6,7 @@ test_that("heartbeat", {
   expire <- 2
   obj <- heartbeat(key, period, expire=expire, start=FALSE)
 
-  con <- RedisAPI::hiredis()
+  con <- redux::hiredis()
   expect_that(con$EXISTS(key), equals(0))
   on.exit(con$DEL(key))
   expect_that(obj$is_running(), is_false())
@@ -35,11 +35,14 @@ test_that("heartbeat", {
 })
 
 test_that("simple interface", {
+  ## This works *fine* in devtools::test() so really not sure what
+  ## trick is being played here.
+  ## skip("crashes")#_on_cran()
   key <- "mykey2"
   period <- 1
   expire <- 2
   obj <- heartbeat(key, period, expire=expire)
-  con <- RedisAPI::hiredis()
+  con <- redux::hiredis()
   on.exit(con$DEL(key))
   Sys.sleep(0.5)
   expect_that(con$EXISTS(key), equals(1))
@@ -55,7 +58,7 @@ test_that("period zero does not enable heartbeat", {
   period <- 0
   expire <- 0
   obj <- heartbeat(key, period, expire=expire)
-  con <- RedisAPI::hiredis()
+  con <- redux::hiredis()
   on.exit(con$DEL(key))
   expect_that(con$EXISTS(key), equals(1))
   expect_that(obj$is_running(), is_false())
@@ -69,7 +72,7 @@ test_that("Send signals", {
   key <- "heartbeat_key"
   period <- 10
   expire <- 20
-  con <- RedisAPI::hiredis()
+  con <- redux::hiredis()
   on.exit(con$DEL(key))
 
   obj <- heartbeat(key, period, expire=expire, start=TRUE)

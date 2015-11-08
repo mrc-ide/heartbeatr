@@ -17,6 +17,7 @@ install:
   - ./travis-tool.sh install_aptget libhiredis-dev
   - ./travis-tool.sh install_deps
   - ./travis-tool.sh github_package ropensci/RedisAPI
+  - ./travis-tool.sh github_package richfitz/redux
 
 script: ./travis-tool.sh run_tests
 
