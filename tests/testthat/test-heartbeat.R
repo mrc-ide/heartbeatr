@@ -7,30 +7,29 @@ test_that("heartbeat", {
   obj <- heartbeat(key, period, expire=expire, start=FALSE)
 
   con <- redux::hiredis()
-  expect_that(con$EXISTS(key), equals(0))
+  expect_equal(con$EXISTS(key), 0)
   on.exit(con$DEL(key))
-  expect_that(obj$is_running(), is_false())
+  expect_false(obj$is_running())
 
   obj$start()
   Sys.sleep(0.5)
-  expect_that(con$EXISTS(key), equals(1))
-  expect_that(con$GET(key), equals(as.character(expire)))
+  expect_equal(con$EXISTS(key), 1)
+  expect_equal(con$GET(key), as.character(expire))
   ttl <- con$TTL(key)
-  expect_that(ttl, is_more_than(period - expire))
-  expect_that(ttl, is_less_than(expire + 1))
-  expect_that(obj$is_running(), is_true())
+  expect_gt(ttl, period - expire)
+  expect_lt(ttl, expire + 1)
+  expect_true(obj$is_running())
 
   obj$stop()
-  expect_that(obj$is_running(), is_false())
-  expect_that(con$EXISTS(key), equals(1))
+  expect_false(obj$is_running())
+  expect_equal(con$EXISTS(key), 1)
   ttl <- con$TTL(key)
   Sys.sleep(ttl + 1)
-  expect_that(con$EXISTS(key), equals(0))
+  expect_equal(con$EXISTS(key), 0)
 
   obj$start()
   Sys.sleep(0.5)
-  expect_that(obj$start(),
-              throws_error("Already running on key"))
+  expect_error(obj$start(), "Already running on key")
   obj$stop()
 })
 
@@ -42,12 +41,12 @@ test_that("simple interface", {
   con <- redux::hiredis()
   on.exit(con$DEL(key))
   Sys.sleep(0.5)
-  expect_that(con$EXISTS(key), equals(1))
-  expect_that(obj$is_running(), is_true())
+  expect_equal(con$EXISTS(key), 1)
+  expect_true(obj$is_running())
   rm(obj)
   gc()
   Sys.sleep(1)
-  expect_that(con$EXISTS(key), equals(0))
+  expect_equal(con$EXISTS(key), 0)
 })
 
 test_that("period zero does not enable heartbeat", {
@@ -57,12 +56,12 @@ test_that("period zero does not enable heartbeat", {
   obj <- heartbeat(key, period, expire=expire)
   con <- redux::hiredis()
   on.exit(con$DEL(key))
-  expect_that(con$EXISTS(key), equals(1))
-  expect_that(obj$is_running(), is_false())
-  expect_that(con$TTL(key), equals(-1)) # infinite ttl
+  expect_equal(con$EXISTS(key), 1)
+  expect_false(obj$is_running())
+  expect_equal(con$TTL(key), -1) # infinite ttl
   rm(obj)
   gc()
-  expect_that(con$EXISTS(key), equals(0))
+  expect_equal(con$EXISTS(key), 0)
 })
 
 test_that("Send signals", {
@@ -74,8 +73,8 @@ test_that("Send signals", {
 
   obj <- heartbeat(key, period, expire=expire, start=TRUE)
   Sys.sleep(0.5)
-  expect_that(con$EXISTS(key), equals(1))
-  expect_that(obj$is_running(), is_true())
+  expect_equal(con$EXISTS(key), 1)
+  expect_true(obj$is_running())
 
   idx <- 0
   f <- function() {
@@ -90,8 +89,8 @@ test_that("Send signals", {
   }
 
   ans <- tryCatch(f(), interrupt=function(e) TRUE)
-  expect_that(ans, is_true())
-  expect_that(idx, not(is_less_than(1)))
-  expect_that(idx, is_less_than(10))
+  expect_true(ans)
+  expect_gte(idx, 1)
+  expect_lt(idx, 10)
   obj$stop()
 })
