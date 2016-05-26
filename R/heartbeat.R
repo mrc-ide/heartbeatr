@@ -73,12 +73,11 @@
 ##' @param expire Key expiry time (in seconds)
 ##' @param value Value to store in the key.  By default it stores the
 ##' expiry time, so the time since last heartbeat can be computed.
-##' @param config A \code{RedisAPI::redis_config} object.
+##' @param config A \code{redux::redis_config} object.
 ##' @param start Should the heartbeat be started immediately?
-##' @importFrom RedisAPI redis_config
 ##' @export
 heartbeat <- function(key, period, expire=3 * period, value=expire,
-                      config=RedisAPI::redis_config(), start=TRUE) {
+                      config=redux::redis_config(), start=TRUE) {
   ret <- .R6_heartbeat$new(config, key, value, period, expire)
   if (start) {
     ret$start()

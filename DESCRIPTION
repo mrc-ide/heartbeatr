@@ -1,12 +1,18 @@
 Package: RedisHeartbeat
 Title: Redis Heartbeat Support
-Version: 0.3.0
+Version: 0.4.0
 Author: Rich FitzJohn
 Maintainer: Rich FitzJohn <rich.fitzjohn@gmail.com>
 Description: Simple heartbeat support for Redis.
-Depends: R (>= 3.1.2)
+Depends:
+    R (>= 3.1.2)
 License: BSD_2_clause + file LICENSE
 LinkingTo: Rcpp
 SystemDepends: libhiredis
-Imports: R6, Rcpp, RedisAPI (>= 0.3.0), redux (>= 0.3.0)
-Suggests: testthat
+Imports:
+    R6,
+    Rcpp,
+    redux (>= 0.5.0)
+Suggests:
+    testthat
+RoxygenNote: 5.0.1
