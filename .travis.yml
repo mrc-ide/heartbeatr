@@ -16,7 +16,7 @@ before_install:
 install:
   - ./travis-tool.sh install_aptget libhiredis-dev
   - ./travis-tool.sh install_deps
-  - ./travis-tool.sh github_package richfitz/redux
+  - ./travis-tool.sh github_package richfitz/redux@merge_with_api
 
 script: ./travis-tool.sh run_tests
 
