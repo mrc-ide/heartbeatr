@@ -4,14 +4,13 @@ R6_heartbeat <- R6::R6Class(
   "heartbeat",
 
   public = list(
-    initialize = function(host, port, key, value, period, expire, start) {
+    initialize = function(host, port, key, value, period, expire) {
       assert_scalar_character(host)
       assert_scalar_character(key)
       assert_scalar_character(value)
       assert_scalar_positive_integer(port)
       assert_scalar_positive_integer(expire)
       assert_scalar_positive_integer(period)
-      assert_scalar_logical(start)
 
       if (expire <= period) {
         stop("expire must be longer than period")
@@ -21,14 +20,11 @@ R6_heartbeat <- R6::R6Class(
       private$port <- as.integer(port)
 
       private$key <- key
-      private$key_signal <- paste0(key, ":signal")
+      private$key_signal <- heartbeat_key_signal(key)
       private$value <- value
 
       private$period <- as.integer(period)
       private$expire <- as.integer(expire)
-      if (start) {
-        self$start()
-      }
     },
 
     ## There is an issue here with _exactly_ what happens where we
@@ -42,7 +38,7 @@ R6_heartbeat <- R6::R6Class(
     ## keep_going bit so we don't have to lock when dealing with the
     ## BLPOP (which could be fairly slow).
     is_running = function() {
-      if (is.null(ptr)) {
+      if (is.null(private$ptr)) {
         FALSE
       } else {
         running <- .Call(heartbeat_running, private$ptr)
@@ -57,24 +53,25 @@ R6_heartbeat <- R6::R6Class(
       if (self$is_running()) {
         stop("Already running on key ", private$key)
       }
-      private$ptr <- .Call(heartbeat_start, private$host, private$port,
+      private$ptr <- .Call(heartbeat_create, private$host, private$port,
                            private$key, private$value, private$key_signal,
-                           private$period, private$expire)
+                           private$expire, private$period)
       invisible(self)
     },
 
-    stop = function() {
-      .Call(heartbeat_stop, private$ptr, FALSE)
+    stop = function(wait = TRUE) {
+      assert_scalar_logical(wait)
+      .Call(heartbeat_stop, private$ptr, FALSE, wait)
     },
 
-    print = function(x, ...) {
+    print = function(...) {
       cat("<heartbeat>\n")
       cat(sprintf("  - running: %s\n", tolower(self$is_running())))
       cat(sprintf("  - redis: %s:%d\n", private$host, private$port))
       cat(sprintf("  - key: %s\n", private$key))
       cat(sprintf("  - period: %d\n", private$period))
       cat(sprintf("  - expire: %d\n", private$expire))
-      invisible(x)
+      invisible(self)
     }
   ),
 
@@ -115,13 +112,11 @@ R6_heartbeat <- R6::R6Class(
 ##' @param expire Key expiry time (in seconds)
 ##' @param value Value to store in the key.  By default it stores the
 ##' expiry time, so the time since last heartbeat can be computed.
-##' @param config A \code{RedisAPI::redis_config} object.
 ##' @param start Should the heartbeat be started immediately?
-##' @importFrom RedisAPI redis_config
 ##' @export
 heartbeat <- function(key, period, expire = 3 * period, value = expire,
-                      config = RedisAPI::redis_config(), start = TRUE) {
-  ret <- R6_heartbeat$new(config, key, value, period, expire)
+                      host = "localhost", port = 6379L, start = TRUE) {
+  ret <- R6_heartbeat$new(host, port, key, as.character(value), period, expire)
   if (start) {
     ret$start()
   }
@@ -137,5 +132,10 @@ heartbeat <- function(key, period, expire = 3 * period, value = expire,
 ##' @export
 ##' @importFrom redux hiredis
 heartbeat_send_signal <- function(con, key, signal) {
-  con$RPUSH(heartbeat_signal_key(key), signal)
+  assert_scalar_character(key)
+  con$RPUSH(heartbeat_key_signal(key), signal)
+}
+
+heartbeat_key_signal <- function(key) {
+  paste0(key, ":signal")
 }

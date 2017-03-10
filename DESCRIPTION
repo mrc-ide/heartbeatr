@@ -10,8 +10,8 @@ License: BSD_2_clause + file LICENSE
 LinkingTo: Rcpp
 SystemDepends: C++11, libhiredis
 Imports:
-    R6,
-    redux (>= 0.3.0)
+    R6
 Suggests:
+    redux (>= 0.5.1),
     testthat
 RoxygenNote: 5.0.1

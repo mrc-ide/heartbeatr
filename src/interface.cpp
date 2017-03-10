@@ -31,12 +31,14 @@ SEXP r_heartbeat_create(SEXP r_host, SEXP r_port, SEXP r_key,
   return ext_ptr;
 }
 
-SEXP r_heartbeat_stop(SEXP ext_ptr, SEXP r_closed_error) {
-  bool closed_error = scalar_logical(r_closed_error, "closed_error");
+SEXP r_heartbeat_stop(SEXP ext_ptr, SEXP r_closed_error, SEXP r_stop) {
+  bool
+    closed_error = scalar_logical(r_closed_error, "closed_error"),
+    stop = scalar_logical(r_stop, "stop");
   payload *data = controller_get(ext_ptr, closed_error);
   bool exists = data != NULL;
   if (exists) {
-    controller_stop(data, true);
+    controller_stop(data, stop);
     R_ClearExternalPtr(ext_ptr);
   }
   // Here, we should open up a connection to the redis server and push
@@ -73,7 +75,7 @@ payload * controller_get(SEXP ext_ptr, bool closed_error) {
 
 static R_CallMethodDef call_methods[]  = {
   {"heartbeat_create",  (DL_FUNC) &r_heartbeat_create,  7},
-  {"heartbeat_stop",    (DL_FUNC) &r_heartbeat_stop,    2},
+  {"heartbeat_stop",    (DL_FUNC) &r_heartbeat_stop,    3},
   {"heartbeat_running", (DL_FUNC) &r_heartbeat_running, 1},
   {NULL, NULL, 0}
 };

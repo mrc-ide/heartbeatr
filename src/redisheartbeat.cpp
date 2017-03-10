@@ -120,7 +120,7 @@ void worker_create(payload *x) {
     return;
   }
   worker_loop(x);
-  // heartbeat_data_free(x->data);
+  heartbeat_data_free(x->data);
   x->stopped = true;
   if (x->orphaned) {
     delete x;
