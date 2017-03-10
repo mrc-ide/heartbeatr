@@ -1,51 +1,93 @@
 ##' @importFrom R6 R6Class
-##' @useDynLib RedisHeartbeat
-##' @importFrom Rcpp evalCpp
-.R6_heartbeat <- R6::R6Class(
+##' @useDynLib RedisHeartbeat, .registration = TRUE
+R6_heartbeat <- R6::R6Class(
   "heartbeat",
 
-  public=list(
-    config=NULL,
-    key=NULL,
-    period=NULL,
-    expire=NULL,
-    value=NULL,
+  public = list(
+    initialize = function(host, port, key, value, period, expire, start) {
+      assert_scalar_character(host)
+      assert_scalar_character(key)
+      assert_scalar_character(value)
+      assert_scalar_positive_integer(port)
+      assert_scalar_positive_integer(expire)
+      assert_scalar_positive_integer(period)
+      assert_scalar_logical(start)
 
-    initialize=function(config, key, value, period, expire) {
-      #
-      if (expire <= period && period > 0) {
+      if (expire <= period) {
         stop("expire must be longer than period")
       }
-      self$config <- config
-      self$key    <- as.character(key)
-      self$period <- as.integer(period)
-      self$expire <- as.integer(expire)
-      self$value  <- as.character(value)
-      reg.finalizer(self, function(e) self$stop())
-    },
 
-    is_running=function() {
-      heartbeat_status()
-    },
+      private$host <- host
+      private$port <- as.integer(port)
 
-    ## TODO: If period is 0, then don't start the heartbeat and don't
-    ## expire the key.
-    start=function() {
-      if (self$is_running()) {
-        stop("Already running on key ", heartbeat_key())
+      private$key <- key
+      private$key_signal <- paste0(key, ":signal")
+      private$value <- value
+
+      private$period <- as.integer(period)
+      private$expire <- as.integer(expire)
+      if (start) {
+        self$start()
       }
-      heartbeat_start(self$config$host, self$config$port,
-                      self$key,    self$value,
-                      self$period, self$expire)
     },
 
-    stop=function() {
-      if (self$period > 0) {
-        heartbeat_stop()
+    ## There is an issue here with _exactly_ what happens where we
+    ## have a situation where the heartbeat has been scheduled for
+    ## closure but it has not closed.  At some point the other thread
+    ## will clear out the pointer and we want to check that it has
+    ## been set to NULL.  So when doing the check for keep_going we
+    ## need to check that able to read safely.  There's a NULL check
+    ## there in the code but it seems unsafe at this point.  I don't
+    ## think this is super hard to get right and it only impacts the
+    ## keep_going bit so we don't have to lock when dealing with the
+    ## BLPOP (which could be fairly slow).
+    is_running = function() {
+      if (is.null(ptr)) {
+        FALSE
       } else {
-        heartbeat_cleanup(self$config$host, self$config$port, self$key)
+        running <- .Call(heartbeat_running, private$ptr)
+        if (!running) {
+          private$ptr <- NULL
+        }
+        running
       }
-    }))
+    },
+
+    start = function() {
+      if (self$is_running()) {
+        stop("Already running on key ", private$key)
+      }
+      private$ptr <- .Call(heartbeat_start, private$host, private$port,
+                           private$key, private$value, private$key_signal,
+                           private$period, private$expire)
+      invisible(self)
+    },
+
+    stop = function() {
+      .Call(heartbeat_stop, private$ptr, FALSE)
+    },
+
+    print = function(x, ...) {
+      cat("<heartbeat>\n")
+      cat(sprintf("  - running: %s\n", tolower(self$is_running())))
+      cat(sprintf("  - redis: %s:%d\n", private$host, private$port))
+      cat(sprintf("  - key: %s\n", private$key))
+      cat(sprintf("  - period: %d\n", private$period))
+      cat(sprintf("  - expire: %d\n", private$expire))
+      invisible(x)
+    }
+  ),
+
+  private = list(
+    ptr = NULL,
+    host = NULL,
+    port = NULL,
+    key = NULL,
+    key_signal = NULL,
+    period = NULL,
+    expire = NULL,
+    value = NULL
+  ))
 
 ##' Create a heartbeat instance.  This can be used by running
 ##' \code{obj$start()} which will reset the TTL on \code{key} every
@@ -57,12 +99,12 @@
 ##' The heartbeat object has three methods:
 ##' \itemize{
 ##'
-##' \item \code{is_running()} which returns \code{TRUE} or \code{FALSE}
-##' if the heartbeat is/is not running.
+##' \item \code{is_running()} which returns \code{TRUE} or
+##' \code{FALSE} if the heartbeat is/is not running.
 ##'
 ##' \item \code{start()} which starts a heartbeat
 ##'
-##' \item \code{stop()} which stops the heartbeat
+##' \item \code{stop()} which requess a stops for the heartbeat
 ##'
 ##' }
 ##'
@@ -77,9 +119,9 @@
 ##' @param start Should the heartbeat be started immediately?
 ##' @importFrom RedisAPI redis_config
 ##' @export
-heartbeat <- function(key, period, expire=3 * period, value=expire,
-                      config=RedisAPI::redis_config(), start=TRUE) {
-  ret <- .R6_heartbeat$new(config, key, value, period, expire)
+heartbeat <- function(key, period, expire = 3 * period, value = expire,
+                      config = RedisAPI::redis_config(), start = TRUE) {
+  ret <- R6_heartbeat$new(config, key, value, period, expire)
   if (start) {
     ret$start()
   }
