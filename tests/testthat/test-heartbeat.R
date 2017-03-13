@@ -103,3 +103,25 @@ test_that("auth", {
   expect_false(obj$is_running())
   expect_equal(con$EXISTS(key), 0)
 })
+
+test_that("db", {
+  skip_if_no_redis()
+  con <- redux::hiredis()
+
+  key <- "heartbeat_key:db"
+  db <- 3L
+
+  con$SELECT(db)
+
+  period <- 1
+  expire <- 2
+  obj <- heartbeat(key, period, expire = expire, db = db)
+
+  expect_is(obj, "heartbeat")
+  expect_is(obj, "R6")
+  expect_true(obj$is_running())
+  expect_equal(con$EXISTS(key), 1)
+  expect_true(obj$stop())
+  expect_false(obj$is_running())
+  expect_equal(con$EXISTS(key), 0)
+})

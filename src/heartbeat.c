@@ -56,7 +56,7 @@ redisContext * heartbeat_connect(const heartbeat_data * data) {
     }
   }
   if (data->db != 0) {
-    redisReply *reply = (redisReply*) redisCommand(con, "SELECT %s", data->db);
+    redisReply *reply = (redisReply*) redisCommand(con, "SELECT %d", data->db);
     if (reply) {
       freeReplyObject(reply);
     } else {
