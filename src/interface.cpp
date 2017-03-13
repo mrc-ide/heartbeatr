@@ -53,7 +53,6 @@ SEXP r_heartbeat_running(SEXP ext_ptr) {
 }
 
 void r_heartbeat_finalize(SEXP ext_ptr) {
-  Rprintf("Cleaning up pointer\n");
   payload * data = controller_get(ext_ptr, false);
   if (data) {
     controller_stop(data, false);

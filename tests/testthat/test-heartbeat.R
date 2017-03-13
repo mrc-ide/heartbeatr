@@ -9,21 +9,22 @@ test_that("heartbeat", {
   expect_is(obj, "R6")
 
   con <- redux::hiredis()
-  expect_that(con$EXISTS(key), equals(0))
+  expect_equal(con$EXISTS(key), 0)
   on.exit(con$DEL(key))
-  expect_that(obj$is_running(), is_false())
+  expect_false(obj$is_running())
 
   obj$start()
-  expect_that(con$EXISTS(key), equals(1))
-  expect_that(con$GET(key), equals(as.character(expire)))
+  expect_equal(con$EXISTS(key), 1)
+  expect_equal(con$GET(key), as.character(expire))
   ttl <- con$TTL(key)
-  expect_that(ttl, is_more_than(period - expire))
-  expect_that(ttl, is_less_than(expire + 1))
-  expect_that(obj$is_running(), is_true())
+
+  expect_gt(ttl, period - expire)
+  expect_lte(ttl, expire)
+  expect_true(obj$is_running())
 
   expect_true(obj$stop())
-  expect_that(obj$is_running(), is_false())
-  expect_that(con$EXISTS(key), equals(0))
+  expect_false(obj$is_running())
+  expect_equal(con$EXISTS(key), 0)
 })
 
 test_that("simple interface", {
@@ -33,15 +34,13 @@ test_that("simple interface", {
   con <- redux::hiredis()
 
   obj <- heartbeat(key, period, expire = expire)
-  expect_that(con$EXISTS(key), equals(1))
-  expect_that(obj$is_running(), is_true())
+  expect_equal(con$EXISTS(key), 1)
+  expect_true(obj$is_running())
 
-  ## OK, this does not work and that's very good to know!  Looks again
-  ## like a double free
   rm(obj)
   gc()
-  Sys.sleep(expire + 0.5)
-  expect_that(con$EXISTS(key), equals(0))
+  Sys.sleep(0.5)
+  expect_equal(con$EXISTS(key), 0)
 })
 
 test_that("Send signals", {
@@ -53,8 +52,8 @@ test_that("Send signals", {
   on.exit(con$DEL(key))
 
   obj <- heartbeat(key, period, expire = expire, start = TRUE)
-  expect_that(con$EXISTS(key), equals(1))
-  expect_that(obj$is_running(), is_true())
+  expect_equal(con$EXISTS(key), 1)
+  expect_true(obj$is_running())
 
   idx <- 0
   dt <- 0.1
@@ -70,9 +69,9 @@ test_that("Send signals", {
   }
 
   ans <- tryCatch(f(), interrupt = function(e) TRUE)
-  expect_that(ans, is_true())
-  expect_that(idx, not(is_less_than(1)))
-  expect_that(idx, is_less_than(10))
-  ## expect_false(obj$is_running())
+  expect_true(ans)
+  expect_gte(idx, 1)
+  expect_lt(idx, 10)
+  expect_true(obj$is_running())
   obj$stop()
 })

@@ -3,7 +3,4 @@
 export(heartbeat)
 export(heartbeat_send_signal)
 importFrom(R6,R6Class)
-importFrom(Rcpp,evalCpp)
-importFrom(RedisAPI,redis_config)
-importFrom(redux,hiredis)
 useDynLib(RedisHeartbeat, .registration = TRUE)

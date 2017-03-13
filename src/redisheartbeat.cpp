@@ -4,11 +4,11 @@
 #include <chrono>
 #include <cstdlib>
 
-#include "util.h"
+#ifndef __WIN32
+#include <csignal>
+#endif
 
-// Rather than testing for orphaned, etc, would it be easier to test
-// to see if the thread exists?  There might be a stdlib way of doing
-// that.
+#include "util.h"
 
 heartbeat_data * heartbeat_data_alloc(const char *host, int port,
                                       const char *key, const char *value,
@@ -104,10 +104,6 @@ bool controller_stop(payload *x, bool wait) {
         std::this_thread::sleep_for(std::chrono::milliseconds(every));
       }
     }
-
-    if (con) {
-      redisFree(con);
-    }
   }
   return false;
 }
@@ -132,12 +128,9 @@ void worker_loop(payload *x) {
     worker_run_alive(x->data);
     int signal = worker_run_poll(x->data);
     if (signal > 0) {
-      /*
-        char *name = strsignal(signal);
-        REprintf("Heartbeat sending signal %s\n", name);
-        kill(getpid(), signal);
-      */
-      // std::cout << "Recieved signal " << signal << std::endl;
+#ifndef __WIN32
+      kill(getpid(), signal);
+#endif
     }
   }
 }

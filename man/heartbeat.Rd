@@ -5,7 +5,7 @@
 \title{Create a heartbeat instance}
 \usage{
 heartbeat(key, period, expire = 3 * period, value = expire,
-  config = RedisAPI::redis_config(), start = TRUE)
+  host = "localhost", port = 6379L, start = TRUE)
 }
 \arguments{
 \item{key}{Key to use}
@@ -17,7 +17,9 @@ heartbeat(key, period, expire = 3 * period, value = expire,
 \item{value}{Value to store in the key.  By default it stores the
 expiry time, so the time since last heartbeat can be computed.}
 
-\item{config}{A \code{RedisAPI::redis_config} object.}
+\item{host}{Redis host to use (by default localhost)}
+
+\item{port}{Redis port to use (by default 6379)}
 
 \item{start}{Should the heartbeat be started immediately?}
 }
@@ -33,12 +35,12 @@ instance has died.
 The heartbeat object has three methods:
 \itemize{
 
-\item \code{is_running()} which returns \code{TRUE} or \code{FALSE}
-if the heartbeat is/is not running.
+\item \code{is_running()} which returns \code{TRUE} or
+\code{FALSE} if the heartbeat is/is not running.
 
 \item \code{start()} which starts a heartbeat
 
-\item \code{stop()} which stops the heartbeat
+\item \code{stop()} which requess a stops for the heartbeat
 
 }
 

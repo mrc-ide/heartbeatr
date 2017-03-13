@@ -112,6 +112,8 @@ R6_heartbeat <- R6::R6Class(
 ##' @param expire Key expiry time (in seconds)
 ##' @param value Value to store in the key.  By default it stores the
 ##' expiry time, so the time since last heartbeat can be computed.
+##' @param host Redis host to use (by default localhost)
+##' @param port Redis port to use (by default 6379)
 ##' @param start Should the heartbeat be started immediately?
 ##' @export
 heartbeat <- function(key, period, expire = 3 * period, value = expire,
@@ -130,7 +132,6 @@ heartbeat <- function(key, period, expire = 3 * period, value = expire,
 ##'   \code{tools::SIGKILL})
 ##' @param con A hiredis object
 ##' @export
-##' @importFrom redux hiredis
 heartbeat_send_signal <- function(con, key, signal) {
   assert_scalar_character(key)
   con$RPUSH(heartbeat_key_signal(key), signal)

@@ -16,8 +16,6 @@ If hiredis is stored in a more exotic location you'll need to tweak `src/Makevar
 
 Redis must be running.  Bad Things will happen if Redis stops while this is running.
 
-This uses the [tiny thread](http://tinythreadpp.bitsnbites.eu/) library, following the lead of [RcppParallel](https://github.com/RcppCore/RcppParallel) - it's possible that we could achive this directly with RcppParallel.
-
 ## Usage
 
 ```r
