@@ -48,16 +48,15 @@ payload * controller_create(heartbeat_data *data) {
 
 bool controller_stop(payload *x, bool wait) {
   if (x) {
-    redisContext * con = redisConnect(x->data->host, x->data->port);
+    redisContext * con = heartbeat_connect(x->data);
     const char *key_signal = string_duplicate(x->data->key_signal);
     int expire = x->data->expire;
-    bool ok = con && !con->err;
 
     if (!wait) {
       x->orphaned = true;
     }
     x->keep_going = false;
-    if (ok) {
+    if (con) {
       redisReply *r = (redisReply*) redisCommand(con, "RPUSH %s 0", key_signal);
       if (r) {
         freeReplyObject(r);

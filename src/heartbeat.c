@@ -39,6 +39,33 @@ void heartbeat_data_free(heartbeat_data * data) {
   }
 }
 
+redisContext * heartbeat_connect(const heartbeat_data * data) {
+  redisContext *con = redisConnect(data->host, data->port);
+  if (con->err) {
+    redisFree(con);
+    return NULL;
+  }
+  if (data->pass != NULL) {
+    redisReply *reply = (redisReply*) redisCommand(con, "AUTH %s", data->pass);
+    if (reply) {
+      freeReplyObject(reply);
+    } else {
+      redisFree(con);
+      return NULL;
+    }
+  }
+  if (data->db != 0) {
+    redisReply *reply = (redisReply*) redisCommand(con, "SELECT %s", data->db);
+    if (reply) {
+      freeReplyObject(reply);
+    } else {
+      redisFree(con);
+      return NULL;
+    }
+  }
+  return con;
+}
+
 void worker_create(payload *x) {
   x->con = worker_init(x->data);
   x->started = x->con != NULL;
@@ -71,11 +98,7 @@ void worker_loop(payload *x) {
 }
 
 redisContext * worker_init(const heartbeat_data *data) {
-  redisContext *con = redisConnect(data->host, data->port);
-  if (con->err) {
-    redisFree(con);
-    return NULL;
-  }
+  redisContext *con = heartbeat_connect(data);
   redisReply *reply = (redisReply*)
     redisCommand(con, "SET %s %s", data->key, data->value);
   if (!reply) {

@@ -42,6 +42,8 @@ heartbeat_data * heartbeat_data_alloc(const char *host, int port,
                                       int expire, int interval);
 void heartbeat_data_free(heartbeat_data * obj);
 
+redisContext * heartbeat_connect(const heartbeat_data *data);
+
 void worker_create(payload *x);
 void worker_loop(payload *x);
 
