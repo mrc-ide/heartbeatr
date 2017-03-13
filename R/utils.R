@@ -44,3 +44,7 @@ assert_scalar_character <- function(x, name = deparse(substitute(x))) {
   assert_character(x, name)
   assert_nonmissing(x, name)
 }
+
+`%||%` <- function(a, b) {
+  if (is.null(a)) b else a
+}

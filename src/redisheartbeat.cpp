@@ -11,6 +11,7 @@
 #include "util.h"
 
 heartbeat_data * heartbeat_data_alloc(const char *host, int port,
+                                      const char *pass, int db,
                                       const char *key, const char *value,
                                       const char *key_signal,
                                       int expire, int interval) {
@@ -18,8 +19,10 @@ heartbeat_data * heartbeat_data_alloc(const char *host, int port,
   if (ret == NULL) {
     return NULL;
   }
-  ret->host = host;
+  ret->host = string_duplicate(host);
   ret->port = port;
+  ret->pass = string_duplicate(pass);
+  ret->db = db;
   ret->key = string_duplicate(key);
   ret->value = string_duplicate(value);
   ret->key_signal = string_duplicate(key_signal);
@@ -30,10 +33,8 @@ heartbeat_data * heartbeat_data_alloc(const char *host, int port,
 
 void heartbeat_data_free(heartbeat_data * data) {
   if (data) {
-    if (data->con) {
-      worker_cleanup(data);
-      redisFree(data->con);
-    }
+    std::free((void*) data->host);
+    std::free((void*) data->pass);
     std::free((void*) data->key);
     std::free((void*) data->value);
     std::free((void*) data->key_signal);
@@ -41,21 +42,20 @@ void heartbeat_data_free(heartbeat_data * data) {
   }
 }
 
-payload * controller_create(const char *host, int port,
-                            const char *key, const char *value,
-                            const char *key_signal, int expire, int interval) {
+payload * controller_create(heartbeat_data *data) {
   payload * x = new payload;
+  x->data = data;
+  x->con = NULL;
   x->started = false;
   x->stopped = false;
   x->orphaned = false;
   x->keep_going = true;
-  x->data = heartbeat_data_alloc(host, port, key, value, key_signal,
-                                 expire, interval);
+
   std::thread t(worker_create, x);
   t.detach();
   // Wait for things to come up
   size_t every = 10;
-  size_t n = expire * 1000 / every + 1;
+  size_t n = x->data->expire * 1000 / every + 1;
   for (size_t i = 0; i < n; ++i) {
     if (x->started) {
       return x;
@@ -109,14 +109,18 @@ bool controller_stop(payload *x, bool wait) {
 }
 
 void worker_create(payload *x) {
-  x->started = worker_init(x->data);
+  x->con = worker_init(x->data);
+  x->started = x->con != NULL;
   if (!x->started) {
     x->keep_going = false;
     heartbeat_data_free(x->data);
+    x->data = NULL;
     return;
   }
   worker_loop(x);
+  worker_cleanup(x->con, x->data);
   heartbeat_data_free(x->data);
+  x->data = NULL;
   x->stopped = true;
   if (x->orphaned) {
     delete x;
@@ -125,8 +129,8 @@ void worker_create(payload *x) {
 
 void worker_loop(payload *x) {
   while (x->keep_going) {
-    worker_run_alive(x->data);
-    int signal = worker_run_poll(x->data);
+    worker_run_alive(x->con, x->data);
+    int signal = worker_run_poll(x->con, x->data);
     if (signal > 0) {
 #ifndef __WIN32
       kill(getpid(), signal);
@@ -135,43 +139,41 @@ void worker_loop(payload *x) {
   }
 }
 
-bool worker_init(heartbeat_data *data) {
-  data->con = redisConnect(data->host, data->port);
-  if (data->con->err) {
-    redisFree(data->con);
-    data->con = NULL;
-    return false;
+redisContext * worker_init(const heartbeat_data *data) {
+  redisContext *con = redisConnect(data->host, data->port);
+  if (con->err) {
+    redisFree(con);
+    return NULL;
   }
   redisReply *reply = (redisReply*)
-    redisCommand(data->con, "SET %s %s", data->key, data->value);
+    redisCommand(con, "SET %s %s", data->key, data->value);
   if (!reply) {
-    redisFree(data->con);
-    data->con = NULL;
-    return false;
+    redisFree(con);
+    return NULL;
   }
   freeReplyObject(reply);
-  return true;
+  return con;
 }
 
-void worker_cleanup(heartbeat_data *data) {
+void worker_cleanup(redisContext *con, const heartbeat_data *data) {
   redisReply *reply = (redisReply*)
-    redisCommand(data->con, "DEL %s", data->key);
+    redisCommand(con, "DEL %s", data->key);
   if (reply) {
     freeReplyObject(reply);
   }
 }
 
-void worker_run_alive(heartbeat_data * data) {
+void worker_run_alive(redisContext *con, const heartbeat_data * data) {
   redisReply *reply = (redisReply*)
-    redisCommand(data->con, "EXPIRE %s %d", data->key, data->expire);
+    redisCommand(con, "EXPIRE %s %d", data->key, data->expire);
   if (reply) {
     freeReplyObject(reply);
   }
 }
 
-int worker_run_poll(heartbeat_data * data) {
+int worker_run_poll(redisContext *con, const heartbeat_data * data) {
   redisReply *reply = (redisReply*)
-    redisCommand(data->con, "BLPOP %s %d", data->key_signal, data->interval);
+    redisCommand(con, "BLPOP %s %d", data->key_signal, data->interval);
   int ret = 0;
   if (reply &&
       reply->type == REDIS_REPLY_ARRAY &&

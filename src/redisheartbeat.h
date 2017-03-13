@@ -26,9 +26,10 @@
 // connection, keys and timing information.
 class heartbeat_data {
 public:
-  redisContext *con;
   const char * host;
   int port;
+  const char * pass;
+  int db;
   const char * key;
   const char * key_signal;
   const char * value;
@@ -41,6 +42,7 @@ public:
 class payload {
 public:
   heartbeat_data *data;
+  redisContext *con;
   bool started;
   bool keep_going;
   bool stopped;
@@ -48,21 +50,21 @@ public:
 };
 
 heartbeat_data * heartbeat_data_alloc(const char *host, int port,
+                                      const char *pass, int db,
                                       const char *key, const char *value,
                                       const char *key_signal,
                                       int expire, int interval);
 void heartbeat_data_free(heartbeat_data * obj);
 
 void worker_create(payload *x);
-bool worker_init(heartbeat_data *data);
-void worker_cleanup(heartbeat_data *data);
 void worker_loop(payload *x);
-void worker_run_alive(heartbeat_data *data);
-int worker_run_poll(heartbeat_data *data);
 
-payload * controller_create(const char *host, int port,
-                            const char *key, const char *value,
-                            const char *key_signal, int expire, int interval);
+redisContext * worker_init(const heartbeat_data *data);
+void worker_cleanup(redisContext *con, const heartbeat_data *data);
+void worker_run_alive(redisContext *con, const heartbeat_data *data);
+int worker_run_poll(redisContext *con, const heartbeat_data *data);
+
+payload * controller_create(heartbeat_data *data);
 bool controller_stop(payload *x, bool wait);
 
 #endif

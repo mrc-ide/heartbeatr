@@ -4,8 +4,9 @@ R6_heartbeat <- R6::R6Class(
   "heartbeat",
 
   public = list(
-    initialize = function(host, port, key, value, period, expire) {
+    initialize = function(host, port, pass, db, key, value, period, expire) {
       assert_scalar_character(host)
+      assert_scalar_character(pass)
       assert_scalar_character(key)
       assert_scalar_character(value)
       assert_scalar_positive_integer(port)
@@ -18,6 +19,8 @@ R6_heartbeat <- R6::R6Class(
 
       private$host <- host
       private$port <- as.integer(port)
+      private$pass <- as.character(pass)
+      private$db <- as.integer(db)
 
       private$key <- key
       private$key_signal <- heartbeat_key_signal(key)
@@ -54,6 +57,7 @@ R6_heartbeat <- R6::R6Class(
         stop("Already running on key ", private$key)
       }
       private$ptr <- .Call(heartbeat_create, private$host, private$port,
+                           private$pass, private$db,
                            private$key, private$value, private$key_signal,
                            private$expire, private$period)
       invisible(self)
@@ -79,6 +83,8 @@ R6_heartbeat <- R6::R6Class(
     ptr = NULL,
     host = NULL,
     port = NULL,
+    pass = NULL,
+    db = NULL,
     key = NULL,
     key_signal = NULL,
     period = NULL,
@@ -111,14 +117,19 @@ R6_heartbeat <- R6::R6Class(
 ##' @param period Timeout period (in seconds)
 ##' @param expire Key expiry time (in seconds)
 ##' @param value Value to store in the key.  By default it stores the
-##' expiry time, so the time since last heartbeat can be computed.
+##'   expiry time, so the time since last heartbeat can be computed.
 ##' @param host Redis host to use (by default localhost)
 ##' @param port Redis port to use (by default 6379)
 ##' @param start Should the heartbeat be started immediately?
+##' @param pass Optional password used (via the \code{AUTH} command
+##'   before any redis commands are run on the server
+##' @param db Database to connect to (if not the default).
 ##' @export
 heartbeat <- function(key, period, expire = 3 * period, value = expire,
-                      host = "localhost", port = 6379L, start = TRUE) {
-  ret <- R6_heartbeat$new(host, port, key, as.character(value), period, expire)
+                      host = "localhost", port = 6379L,
+                      pass = NULL, db = NULL, start = TRUE) {
+  ret <- R6_heartbeat$new(host, port, pass %||% "", db %||% 0L, key,
+                          as.character(value), period, expire)
   if (start) {
     ret$start()
   }
