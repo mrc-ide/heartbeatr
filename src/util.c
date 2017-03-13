@@ -1,15 +1,15 @@
 #include "util.h"
-#include <cstring>
-#include <cstdlib>
+#include <string.h>
+#include <stdlib.h>
 
 // This is basically C code that I'm compiling with the C++ compiler
 // to keep things relatively straightforward.  That should be allowed
 // and later I might roll it back to use C, but there's not a great
 // need to do so.
 char * string_duplicate(const char * x) {
-  const size_t n = std::strlen(x);
-  char * ret = (char*) std::calloc(n + 1, sizeof(char));
-  std::strcpy(ret, x);
+  const size_t n = strlen(x);
+  char * ret = (char*) calloc(n + 1, sizeof(char));
+  strcpy(ret, x);
   return ret;
 }
 

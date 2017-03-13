@@ -1,5 +1,6 @@
 #include "interface.h"
-#include "redisheartbeat.h"
+#include "heartbeat.h"
+#include "thread.h"
 #include "util.h"
 #include <R_ext/Rdynload.h>
 
@@ -66,7 +67,7 @@ payload * controller_get(SEXP ext_ptr, bool closed_error) {
   if (TYPEOF(ext_ptr) != EXTPTRSXP) {
     Rf_error("Expected an external pointer");
   }
-  ptr = static_cast<payload*>(R_ExternalPtrAddr(ext_ptr));
+  ptr = (payload*)R_ExternalPtrAddr(ext_ptr);
   if (closed_error && ptr == NULL) {
     Rf_error("controller already freed");
   }
@@ -80,6 +81,6 @@ static R_CallMethodDef call_methods[]  = {
   {NULL, NULL, 0}
 };
 
-extern "C" void R_init_RedisHeartbeat(DllInfo *info) {
+void R_init_RedisHeartbeat(DllInfo *info) {
   R_registerRoutines(info, NULL, call_methods, NULL, NULL);
 }

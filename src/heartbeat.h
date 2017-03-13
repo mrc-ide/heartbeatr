@@ -1,31 +1,18 @@
-#ifndef _REDISHEARTBEAT_H_
-#define _REDISHEARTBEAT_H_
+#ifndef HEARTBEAT_HEARTBEAT_H
+#define HEARTBEAT_HEARTBEAT_H
 
-// This is written in a bit of a mix between C and C++ at the moment;
-// partly this is because working with hiredis means we have a C API
-// to play with and there's not much that can be done about that.
-//
-// Because I want to have control over the memory management using R's
-// external pointer objects I need to use the C API there too.
-//
-// Basically, I'd be happy to rewrite this entirely in C but would
-// like a platfor independent threading library; C++11 gives us that
-// and for this package it seems enough.
-//
-// Eventually I might move this over into a more idiomatic C++
-// interface but this is meant to be a relatively small and simple
-// program.  Alternatively, I might pull the thread-requiring bits
-// into their own file and do the rest as pure C; that is only
-// controller_create and controller_stop
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #include <hiredis/hiredis.h>
 #include <R.h>
 #include <Rinternals.h>
+#include <stdbool.h>
 
 // This is the bits required to communicate with Redis; the
 // connection, keys and timing information.
-class heartbeat_data {
-public:
+typedef struct heartbeat_data {
   const char * host;
   int port;
   const char * pass;
@@ -35,19 +22,18 @@ public:
   const char * value;
   int expire;
   int interval;
-};
+} heartbeat_data;
 
 // This will hold both the allocated heartbeat data object and a
 // shared flag that will be used to communicate between the processes.
-class payload {
-public:
+typedef struct payload {
   heartbeat_data *data;
   redisContext *con;
   bool started;
   bool keep_going;
   bool stopped;
   bool orphaned;
-};
+} payload;
 
 heartbeat_data * heartbeat_data_alloc(const char *host, int port,
                                       const char *pass, int db,
@@ -64,7 +50,8 @@ void worker_cleanup(redisContext *con, const heartbeat_data *data);
 void worker_run_alive(redisContext *con, const heartbeat_data *data);
 int worker_run_poll(redisContext *con, const heartbeat_data *data);
 
-payload * controller_create(heartbeat_data *data);
-bool controller_stop(payload *x, bool wait);
+#ifdef __cplusplus
+}
+#endif
 
 #endif
