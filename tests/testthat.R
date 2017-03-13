@@ -1,4 +1,4 @@
 library(testthat)
-library(RedisHeartbeat)
+library(heartbeatr)
 
-test_check("RedisHeartbeat")
+test_check("heartbeatr")

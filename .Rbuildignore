@@ -1,4 +1,4 @@
 ^Makefile$
 ^\.travis\.yml$
-^RedisHeartbeat_.*\.tar.gz$
+^heartbeatr_.*\.tar.gz$
 ^TODO\.md$

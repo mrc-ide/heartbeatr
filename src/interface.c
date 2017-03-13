@@ -81,6 +81,6 @@ static R_CallMethodDef call_methods[]  = {
   {NULL, NULL, 0}
 };
 
-void R_init_RedisHeartbeat(DllInfo *info) {
+void R_init_heartbeatr(DllInfo *info) {
   R_registerRoutines(info, NULL, call_methods, NULL, NULL);
 }

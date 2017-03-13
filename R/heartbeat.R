@@ -1,5 +1,5 @@
 ##' @importFrom R6 R6Class
-##' @useDynLib RedisHeartbeat, .registration = TRUE
+##' @useDynLib heartbeatr, .registration = TRUE
 R6_heartbeat <- R6::R6Class(
   "heartbeat",
 
