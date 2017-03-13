@@ -125,3 +125,25 @@ test_that("db", {
   expect_false(obj$is_running())
   expect_equal(con$EXISTS(key), 0)
 })
+
+test_that("dying process", {
+  skip_if_no_redis()
+  skip_if_not_installed("processx")
+  Sys.setenv(R_TESTS = "")
+
+  con <- redux::hiredis()
+  expire <- 2
+
+  key <- "heartbeat_key:die"
+  Rscript <- file.path(R.home(), "bin", "Rscript")
+  px <- processx::process$new(Rscript,
+                              c("run-heartbeat.R", key, 1, expire, 600))
+  Sys.sleep(0.5)
+  expect_equal(con$EXISTS(key), 1)
+  px$kill(0)
+  Sys.sleep(0.5)
+  expect_equal(con$EXISTS(key), 1)
+  expect_false(px$is_alive())
+  Sys.sleep(expire)
+  expect_equal(con$EXISTS(key), 0)
+})

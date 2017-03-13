@@ -11,7 +11,10 @@ SystemDepends: C++11, libhiredis, redis-server
 Imports:
     R6
 Suggests:
+    processx,
     redux (>= 0.5.1),
     testthat
 RoxygenNote: 5.0.1
-Remotes: richfitz/redux
+Remotes:
+  gaborscardi/processx,
+  richfitz/redux
