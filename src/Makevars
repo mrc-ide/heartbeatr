@@ -1,3 +1,0 @@
-PKG_CXXFLAGS =  -D_FILE_OFFSET_BITS=64 -I/usr/local/include
-PKG_LIBS     =  -L/usr/local/lib -lhiredis
-CXX_STD = CXX11
