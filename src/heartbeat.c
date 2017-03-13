@@ -8,7 +8,7 @@
 #include "util.h"
 
 heartbeat_data * heartbeat_data_alloc(const char *host, int port,
-                                      const char *pass, int db,
+                                      const char *password, int db,
                                       const char *key, const char *value,
                                       const char *key_signal,
                                       int expire, int interval) {
@@ -18,7 +18,7 @@ heartbeat_data * heartbeat_data_alloc(const char *host, int port,
   }
   ret->host = string_duplicate(host);
   ret->port = port;
-  ret->pass = string_duplicate(pass);
+  ret->password = string_duplicate(password);
   ret->db = db;
   ret->key = string_duplicate(key);
   ret->value = string_duplicate(value);
@@ -31,7 +31,7 @@ heartbeat_data * heartbeat_data_alloc(const char *host, int port,
 void heartbeat_data_free(heartbeat_data * data) {
   if (data) {
     free((void*) data->host);
-    free((void*) data->pass);
+    free((void*) data->password);
     free((void*) data->key);
     free((void*) data->value);
     free((void*) data->key_signal);
@@ -45,8 +45,9 @@ redisContext * heartbeat_connect(const heartbeat_data * data) {
     redisFree(con);
     return NULL;
   }
-  if (data->pass != NULL) {
-    redisReply *reply = (redisReply*) redisCommand(con, "AUTH %s", data->pass);
+  if (data->password != NULL) {
+    redisReply *reply = (redisReply*)
+      redisCommand(con, "AUTH %s", data->password);
     if (reply) {
       freeReplyObject(reply);
     } else {

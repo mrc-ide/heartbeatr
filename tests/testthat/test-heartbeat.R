@@ -1,7 +1,8 @@
 context("heartbeat")
 
-test_that("heartbeat", {
-  key <- "heartbeat_key"
+test_that("basic", {
+  skip_if_no_redis()
+  key <- "heartbeat_key:basic"
   period <- 1
   expire <- 2
   obj <- heartbeat(key, period, expire = expire, start = FALSE)
@@ -27,8 +28,9 @@ test_that("heartbeat", {
   expect_equal(con$EXISTS(key), 0)
 })
 
-test_that("simple interface", {
-  key <- "mykey2"
+test_that("Garbage collection", {
+  skip_if_no_redis()
+  key <- "heartbeat_key:gc"
   period <- 1
   expire <- 2
   con <- redux::hiredis()
@@ -44,8 +46,9 @@ test_that("simple interface", {
 })
 
 test_that("Send signals", {
+  skip_if_no_redis()
   skip_on_os("windows")
-  key <- "heartbeat_key"
+  key <- "heartbeat_key:signals"
   period <- 10
   expire <- 20
   con <- redux::hiredis()
@@ -74,4 +77,29 @@ test_that("Send signals", {
   expect_lt(idx, 10)
   expect_true(obj$is_running())
   obj$stop()
+})
+
+test_that("auth", {
+  skip_if_not_isolated_redis()
+  con <- redux::hiredis()
+
+  key <- "heartbeat_key:auth"
+  password <- "password"
+
+  con$CONFIG_SET("requirepass", password)
+  con$AUTH(password)
+  on.exit(con$CONFIG_SET("requirepass", ""))
+
+  expect_error(redux::hiredis()$PING(), "NOAUTH")
+
+  period <- 1
+  expire <- 2
+  obj <- heartbeat(key, period, expire = expire, password = password)
+  expect_is(obj, "heartbeat")
+  expect_is(obj, "R6")
+  expect_true(obj$is_running())
+  expect_equal(con$EXISTS(key), 1)
+  expect_true(obj$stop())
+  expect_false(obj$is_running())
+  expect_equal(con$EXISTS(key), 0)
 })

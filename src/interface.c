@@ -11,12 +11,12 @@ payload * controller_get(SEXP ext_ptr, bool closed_error);
 // prevent C++ exceptions bombing and dropping us out of R.  All entry
 // points are in this file and it should be sufficient to consider
 // this only.
-SEXP r_heartbeat_create(SEXP r_host, SEXP r_port, SEXP r_pass, SEXP r_db,
+SEXP r_heartbeat_create(SEXP r_host, SEXP r_port, SEXP r_password, SEXP r_db,
                         SEXP r_key, SEXP r_value, SEXP r_key_signal,
                         SEXP r_expire, SEXP r_interval) {
   const char
     *host = scalar_string(r_host, "host"),
-    *pass = scalar_string(r_pass, "pass"),
+    *password = scalar_string(r_password, "password"),
     *key = scalar_string(r_key, "key"),
     *value = scalar_string(r_value, "value"),
     *key_signal = scalar_string(r_key_signal, "key_signal");
@@ -26,7 +26,7 @@ SEXP r_heartbeat_create(SEXP r_host, SEXP r_port, SEXP r_pass, SEXP r_db,
     expire = scalar_integer(r_expire, "expire"),
     interval = scalar_integer(r_interval, "interval");
 
-  heartbeat_data *data = heartbeat_data_alloc(host, port, pass, db,
+  heartbeat_data *data = heartbeat_data_alloc(host, port, password, db,
                                               key, value, key_signal,
                                               expire, interval);
   void * ptr = controller_create(data);

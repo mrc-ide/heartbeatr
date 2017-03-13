@@ -15,7 +15,7 @@ extern "C" {
 typedef struct heartbeat_data {
   const char * host;
   int port;
-  const char * pass;
+  const char * password;
   int db;
   const char * key;
   const char * key_signal;
@@ -36,7 +36,7 @@ typedef struct payload {
 } payload;
 
 heartbeat_data * heartbeat_data_alloc(const char *host, int port,
-                                      const char *pass, int db,
+                                      const char *password, int db,
                                       const char *key, const char *value,
                                       const char *key_signal,
                                       int expire, int interval);
