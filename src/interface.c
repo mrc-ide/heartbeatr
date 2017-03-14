@@ -29,21 +29,31 @@ SEXP r_heartbeat_create(SEXP r_host, SEXP r_port, SEXP r_password, SEXP r_db,
   heartbeat_data *data = heartbeat_data_alloc(host, port, password, db,
                                               key, value, key_signal,
                                               expire, interval);
+  if (data == NULL) {
+    Rf_error("Failure allocating memory"); // # nocov
+  }
   void * ptr = controller_create(data);
+
+  if (ptr == NULL) {
+    Rf_error("Error creating heartbeat thread (probably connection failure)");
+  }
+
   SEXP ext_ptr = PROTECT(R_MakeExternalPtr(ptr, R_NilValue, R_NilValue));
   R_RegisterCFinalizer(ext_ptr, r_heartbeat_finalize);
   UNPROTECT(1);
   return ext_ptr;
 }
 
-SEXP r_heartbeat_stop(SEXP ext_ptr, SEXP r_closed_error, SEXP r_stop) {
+SEXP r_heartbeat_stop(SEXP ext_ptr, SEXP r_closed_error, SEXP r_wait,
+                      SEXP r_timeout) {
   bool
     closed_error = scalar_logical(r_closed_error, "closed_error"),
-    stop = scalar_logical(r_stop, "stop");
+    wait = scalar_logical(r_wait, "wait");
+  double timeout = scalar_numeric(r_timeout, "timeout");
   payload *ptr = controller_get(ext_ptr, closed_error);
   bool exists = ptr != NULL;
   if (exists) {
-    controller_stop(ptr, stop);
+    controller_stop(ptr, wait, timeout);
     R_ClearExternalPtr(ext_ptr);
   }
   return ScalarLogical(exists);
@@ -57,7 +67,7 @@ SEXP r_heartbeat_running(SEXP ext_ptr) {
 void r_heartbeat_finalize(SEXP ext_ptr) {
   payload * ptr = controller_get(ext_ptr, false);
   if (ptr) {
-    controller_stop(ptr, false);
+    controller_stop(ptr, false, 0);
     R_ClearExternalPtr(ext_ptr);
   }
 }
@@ -69,14 +79,14 @@ payload * controller_get(SEXP ext_ptr, bool closed_error) {
   }
   ptr = (payload*)R_ExternalPtrAddr(ext_ptr);
   if (closed_error && ptr == NULL) {
-    Rf_error("controller already freed");
+    Rf_error("heartbeat pointer already freed");
   }
   return ptr;
 }
 
 static R_CallMethodDef call_methods[]  = {
   {"heartbeat_create",  (DL_FUNC) &r_heartbeat_create,  9},
-  {"heartbeat_stop",    (DL_FUNC) &r_heartbeat_stop,    3},
+  {"heartbeat_stop",    (DL_FUNC) &r_heartbeat_stop,    4},
   {"heartbeat_running", (DL_FUNC) &r_heartbeat_running, 1},
   {NULL, NULL, 0}
 };

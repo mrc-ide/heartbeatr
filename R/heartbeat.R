@@ -64,9 +64,16 @@ R6_heartbeat <- R6::R6Class(
       invisible(self)
     },
 
-    stop = function(wait = TRUE) {
+    stop = function(wait = TRUE, timeout = 10) {
       assert_scalar_logical(wait)
-      .Call(heartbeat_stop, private$ptr, FALSE, wait)
+      assert_scalar_numeric(timeout)
+      if (timeout < 0) {
+        stop("timeout must be positive")
+      }
+      ret <- .Call(heartbeat_stop, private$ptr, FALSE, wait,
+                   as.numeric(timeout))
+      private$ptr <- NULL
+      ret
     },
 
     print = function(...) {

@@ -147,3 +147,49 @@ test_that("dying process", {
   Sys.sleep(expire)
   expect_equal(con$EXISTS(key), 0)
 })
+
+test_that("pointer handling", {
+  skip_if_no_redis()
+  key <- "heartbeat_key:basic"
+  period <- 1
+  expire <- 2
+  obj <- heartbeat(key, period, expire = expire, start = TRUE)
+
+  private <- environment(obj$initialize)$private
+  ptr <- private$ptr
+  null_ptr <- unserialize(serialize(ptr, NULL))
+
+  obj$stop()
+
+  expect_error(.Call(heartbeat_stop, NULL, TRUE, FALSE, 1),
+               "Expected an external pointer")
+  expect_error(.Call(heartbeat_stop, null_ptr, TRUE, FALSE, 1),
+               "already freed")
+})
+
+test_that("connnection failure", {
+  skip_if_no_redis()
+  key <- "heartbeat_key:basic"
+  period <- 1
+  expire <- 2
+
+  expect_error(
+    heartbeat(key, period, expire = expire, port = 9999, start = TRUE),
+    "Error creating heartbeat thread")
+  expect_error(
+    heartbeat(key, period, expire = expire, password = "yo", start = TRUE),
+    "Error creating heartbeat thread")
+  expect_error(
+    heartbeat(key, period, expire = expire, db = 99, start = TRUE),
+    "Error creating heartbeat thread")
+
+  skip_if_not_isolated_redis()
+  password <- "yolo"
+  con <- redux::hiredis()
+  con$CONFIG_SET("requirepass", password)
+  con$AUTH(password)
+  on.exit(con$CONFIG_SET("requirepass", ""))
+  expect_error(
+    heartbeat(key, period, expire = expire, start = TRUE),
+    "Error creating heartbeat thread")
+})

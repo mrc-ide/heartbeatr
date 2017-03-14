@@ -4,6 +4,9 @@ test_that("assertions", {
   expect_error(assert_logical("a"), "must be a logical")
   expect_error(assert_logical(1), "must be a logical")
 
+  expect_error(assert_numeric("a"), "must be a numeric")
+  expect_error(assert_numeric(TRUE), "must be a numeric")
+
   expect_error(assert_character(1), "must be a character")
   expect_error(assert_character(TRUE), "must be a character")
 

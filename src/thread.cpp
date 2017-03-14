@@ -14,6 +14,9 @@
 // approach.
 
 payload * controller_create(heartbeat_data *data) {
+  // I do not know what in here is throwable but in general I can't
+  // have things throwing!  This might all need to go in a big
+  // try/catch.
   payload * x = (payload*) std::calloc(1, sizeof(payload));
   x->data = data;
   x->con = NULL;
@@ -46,11 +49,11 @@ payload * controller_create(heartbeat_data *data) {
   return NULL;
 }
 
-bool controller_stop(payload *x, bool wait) {
+bool controller_stop(payload *x, bool wait, double timeout) {
+  bool status = false;
   if (x) {
     redisContext * con = heartbeat_connect(x->data);
     const char *key_signal = string_duplicate(x->data->key_signal);
-    int expire = x->data->expire;
 
     if (!wait) {
       x->orphaned = true;
@@ -64,16 +67,18 @@ bool controller_stop(payload *x, bool wait) {
       redisFree(con);
     }
     if (wait) {
-      size_t every = 10;
-      size_t n = expire * 1000 / every + 1;
+      size_t time_poll = 10; // must go into 1000 nicely
+      size_t timeout_ms = ceil(timeout * 1000);
+      size_t n = timeout_ms / time_poll + 1;
       for (size_t i = 0; i < n; ++i) {
         if (x->stopped) {
           std::free(x);
-          return true;
+          status = true;
+          break;
         }
-        std::this_thread::sleep_for(std::chrono::milliseconds(every));
+        std::this_thread::sleep_for(std::chrono::milliseconds(time_poll));
       }
     }
   }
-  return false;
+  return status;
 }

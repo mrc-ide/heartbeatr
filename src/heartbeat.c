@@ -14,11 +14,17 @@ heartbeat_data * heartbeat_data_alloc(const char *host, int port,
                                       int expire, int interval) {
   heartbeat_data * ret = (heartbeat_data*) calloc(1, sizeof(heartbeat_data));
   if (ret == NULL) {
-    return NULL;
+    // This is only the case when there is a failure in the allocator
+    // allocating a single element (so probably not very common)
+    return NULL; // # nocov
   }
   ret->host = string_duplicate(host);
   ret->port = port;
-  ret->password = string_duplicate(password);
+  if (strlen(password) == 0) {
+    ret->password = NULL;
+  } else {
+    ret->password = string_duplicate(password);
+  }
   ret->db = db;
   ret->key = string_duplicate(key);
   ret->value = string_duplicate(value);
@@ -31,7 +37,9 @@ heartbeat_data * heartbeat_data_alloc(const char *host, int port,
 void heartbeat_data_free(heartbeat_data * data) {
   if (data) {
     free((void*) data->host);
-    free((void*) data->password);
+    if (data->password != NULL) {
+      free((void*) data->password);
+    }
     free((void*) data->key);
     free((void*) data->value);
     free((void*) data->key_signal);
@@ -40,6 +48,19 @@ void heartbeat_data_free(heartbeat_data * data) {
 }
 
 redisContext * heartbeat_connect(const heartbeat_data * data) {
+  // TODO:
+  //
+  // There are several places where things can fail and at present no
+  // hint is given as to what the underlying problem is:
+  //
+  // * failure in initial connection (FAILED)
+  // * failure in password (AUTH)
+  // * failure in selecting db (DB)
+  // * failure in setting the key (SET)
+  //
+  // We can accept a pointer to this function that we can shepherd
+  // back into the calling function via the payload while remaining
+  // threadsafe.
   redisContext *con = redisConnect(data->host, data->port);
   if (con->err) {
     redisFree(con);
@@ -48,18 +69,22 @@ redisContext * heartbeat_connect(const heartbeat_data * data) {
   if (data->password != NULL) {
     redisReply *reply = (redisReply*)
       redisCommand(con, "AUTH %s", data->password);
+    bool error = reply == NULL || reply->type == REDIS_REPLY_ERROR;
     if (reply) {
       freeReplyObject(reply);
-    } else {
+    }
+    if (error) {
       redisFree(con);
       return NULL;
     }
   }
   if (data->db != 0) {
     redisReply *reply = (redisReply*) redisCommand(con, "SELECT %d", data->db);
+    bool error = reply == NULL || reply->type == REDIS_REPLY_ERROR;
     if (reply) {
       freeReplyObject(reply);
-    } else {
+    }
+    if (error) {
       redisFree(con);
       return NULL;
     }
@@ -100,13 +125,19 @@ void worker_loop(payload *x) {
 
 redisContext * worker_init(const heartbeat_data *data) {
   redisContext *con = heartbeat_connect(data);
+  if (!con) {
+    return NULL;
+  }
   redisReply *reply = (redisReply*)
-    redisCommand(con, "SET %s %s", data->key, data->value);
-  if (!reply) {
+    redisCommand(con, "SET %s %s EX %d", data->key, data->value, data->expire);
+  bool error = reply == NULL || reply->type == REDIS_REPLY_ERROR;
+  if (reply) {
+    freeReplyObject(reply);
+  }
+  if (error) {
     redisFree(con);
     return NULL;
   }
-  freeReplyObject(reply);
   return con;
 }
 

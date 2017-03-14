@@ -33,3 +33,10 @@ bool scalar_logical(SEXP x, const char * name) {
   }
   return INTEGER(x)[0] != 0;
 }
+
+double scalar_numeric(SEXP x, const char * name) {
+  if (TYPEOF(x) != REALSXP || length(x) != 1) {
+    Rf_error("Expected a scalar numeric for %s", name);
+  }
+  return REAL(x)[0];
+}
