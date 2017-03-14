@@ -47,7 +47,8 @@ void heartbeat_data_free(heartbeat_data * data) {
   }
 }
 
-redisContext * heartbeat_connect(const heartbeat_data * data) {
+redisContext * heartbeat_connect(const heartbeat_data * data,
+                                 heartbeat_connection_status * status) {
   // TODO:
   //
   // There are several places where things can fail and at present no
@@ -63,6 +64,7 @@ redisContext * heartbeat_connect(const heartbeat_data * data) {
   // threadsafe.
   redisContext *con = redisConnect(data->host, data->port);
   if (con->err) {
+    *status = FAILURE_CONNECT;
     redisFree(con);
     return NULL;
   }
@@ -74,6 +76,7 @@ redisContext * heartbeat_connect(const heartbeat_data * data) {
       freeReplyObject(reply);
     }
     if (error) {
+      *status = FAILURE_AUTH;
       redisFree(con);
       return NULL;
     }
@@ -82,6 +85,7 @@ redisContext * heartbeat_connect(const heartbeat_data * data) {
     redisReply *reply = (redisReply*) redisCommand(con, "SELECT %d", data->db);
     bool error = reply == NULL || reply->type == REDIS_REPLY_ERROR;
     if (reply) {
+      *status = FAILURE_SELECT;
       freeReplyObject(reply);
     }
     if (error) {
@@ -93,7 +97,7 @@ redisContext * heartbeat_connect(const heartbeat_data * data) {
 }
 
 void worker_create(payload *x) {
-  x->con = worker_init(x->data);
+  x->con = worker_init(x->data, &(x->status));
   x->started = x->con != NULL;
   if (!x->started) {
     x->keep_going = false;
@@ -123,8 +127,9 @@ void worker_loop(payload *x) {
   }
 }
 
-redisContext * worker_init(const heartbeat_data *data) {
-  redisContext *con = heartbeat_connect(data);
+redisContext * worker_init(const heartbeat_data *data,
+                           heartbeat_connection_status * status) {
+  redisContext *con = heartbeat_connect(data, status);
   if (!con) {
     return NULL;
   }
@@ -135,6 +140,7 @@ redisContext * worker_init(const heartbeat_data *data) {
     freeReplyObject(reply);
   }
   if (error) {
+    *status = FAILURE_SET;
     redisFree(con);
     return NULL;
   }

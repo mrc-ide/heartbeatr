@@ -6,6 +6,7 @@
 
 static void r_heartbeat_finalize(SEXP ext_ptr);
 payload * controller_get(SEXP ext_ptr, bool closed_error);
+void throw_connection_error(heartbeat_connection_status status);
 
 // TODO: We need to stick all this within a C++ try/catch block to
 // prevent C++ exceptions bombing and dropping us out of R.  All entry
@@ -33,10 +34,11 @@ SEXP r_heartbeat_create(SEXP r_host, SEXP r_port, SEXP r_password, SEXP r_db,
   if (data == NULL) {
     Rf_error("Failure allocating memory"); // # nocov
   }
-  void * ptr = controller_create(data, timeout);
+  heartbeat_connection_status status;
+  void * ptr = controller_create(data, timeout, &status);
 
   if (ptr == NULL) {
-    Rf_error("Error creating heartbeat thread (probably connection failure)");
+    throw_connection_error(status);
   }
 
   SEXP ext_ptr = PROTECT(R_MakeExternalPtr(ptr, R_NilValue, R_NilValue));
@@ -84,6 +86,30 @@ payload * controller_get(SEXP ext_ptr, bool closed_error) {
   }
   return ptr;
 }
+
+void throw_connection_error(heartbeat_connection_status status) {
+  switch (status) {
+  case UNSET:
+  case OK:
+    Rf_error("Failed to create heatbeat (unknown reason)"); // # nocov
+    break;
+  case FAILURE_CONNECT:
+    Rf_error("Failed to create heartbeat: redis connection failed");
+    break;
+  case FAILURE_AUTH:
+    Rf_error("Failed to create heatbeat: authentication refused");
+    break;
+  case FAILURE_SELECT:
+    Rf_error("Failed to create heatbeat: could not SELECT db");
+    break;
+  case FAILURE_SET:
+    Rf_error("Failed to create heatbeat: could not SET (password required?)");
+    break;
+  case FAILURE_ORPHAN:
+    Rf_error("Failed to create heartbeat: did not come up in time");
+    break;
+  }
+} // # nocov
 
 static R_CallMethodDef call_methods[]  = {
   {"heartbeat_create",  (DL_FUNC) &r_heartbeat_create,  10},

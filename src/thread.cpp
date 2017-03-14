@@ -13,7 +13,8 @@
 // approach and so this uses a naked pointer C-style programming
 // approach.
 
-payload * controller_create(heartbeat_data *data, double timeout) {
+payload * controller_create(heartbeat_data *data, double timeout,
+                            heartbeat_connection_status *status) {
   // I do not know what in here is throwable but in general I can't
   // have things throwing!  This might all need to go in a big
   // try/catch.
@@ -24,6 +25,7 @@ payload * controller_create(heartbeat_data *data, double timeout) {
   x->stopped = false;
   x->orphaned = false;
   x->keep_going = true;
+  x->status = UNSET;
 
   std::thread t(worker_create, x);
   t.detach();
@@ -33,8 +35,10 @@ payload * controller_create(heartbeat_data *data, double timeout) {
   size_t n = timeout_ms / time_poll;
   for (size_t i = 0; i < n; ++i) {
     if (x->started) {
+      *status = OK;
       return x;
     } else if (!x->keep_going) {
+      *status = x->status;
       std::free(x);
       x = NULL;
       break;
@@ -43,6 +47,7 @@ payload * controller_create(heartbeat_data *data, double timeout) {
   }
   // We did not come up in time!
   if (x) {
+    *status = FAILURE_ORPHAN;
     x->orphaned = false;
     x->keep_going = false;
   }
@@ -50,9 +55,10 @@ payload * controller_create(heartbeat_data *data, double timeout) {
 }
 
 bool controller_stop(payload *x, bool wait, double timeout) {
-  bool status = false;
+  bool ret = false;
   if (x) {
-    redisContext * con = heartbeat_connect(x->data);
+    heartbeat_connection_status status;
+    redisContext * con = heartbeat_connect(x->data, &status);
     const char *key_signal = string_duplicate(x->data->key_signal);
 
     if (!wait) {
@@ -73,7 +79,7 @@ bool controller_stop(payload *x, bool wait, double timeout) {
       for (size_t i = 0; i < n; ++i) {
         if (x->stopped) {
           std::free(x);
-          status = true;
+          ret = true;
           break;
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(time_poll));
@@ -81,5 +87,5 @@ bool controller_stop(payload *x, bool wait, double timeout) {
     }
     std::free((void*) key_signal);
   }
-  return status;
+  return ret;
 }

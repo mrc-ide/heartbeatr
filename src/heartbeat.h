@@ -22,6 +22,16 @@ typedef struct heartbeat_data {
   int interval;
 } heartbeat_data;
 
+typedef enum {
+  UNSET,
+  OK,
+  FAILURE_CONNECT,
+  FAILURE_AUTH,
+  FAILURE_SELECT,
+  FAILURE_SET,
+  FAILURE_ORPHAN
+} heartbeat_connection_status;
+
 // This will hold both the allocated heartbeat data object and a
 // shared flag that will be used to communicate between the processes.
 typedef struct payload {
@@ -31,7 +41,9 @@ typedef struct payload {
   bool keep_going;
   bool stopped;
   bool orphaned;
+  heartbeat_connection_status status;
 } payload;
+
 
 heartbeat_data * heartbeat_data_alloc(const char *host, int port,
                                       const char *password, int db,
@@ -40,12 +52,14 @@ heartbeat_data * heartbeat_data_alloc(const char *host, int port,
                                       int expire, int interval);
 void heartbeat_data_free(heartbeat_data * obj);
 
-redisContext * heartbeat_connect(const heartbeat_data *data);
+redisContext * heartbeat_connect(const heartbeat_data *data,
+                                 heartbeat_connection_status * status);
 
 void worker_create(payload *x);
 void worker_loop(payload *x);
 
-redisContext * worker_init(const heartbeat_data *data);
+redisContext * worker_init(const heartbeat_data *data,
+                           heartbeat_connection_status * status);
 void worker_cleanup(redisContext *con, const heartbeat_data *data);
 void worker_run_alive(redisContext *con, const heartbeat_data *data);
 int worker_run_poll(redisContext *con, const heartbeat_data *data);

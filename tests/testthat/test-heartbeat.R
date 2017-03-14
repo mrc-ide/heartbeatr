@@ -23,6 +23,9 @@ test_that("basic", {
   expect_lte(ttl, expire)
   expect_true(obj$is_running())
 
+  expect_error(obj$start(), "Already running on key")
+  expect_true(obj$is_running())
+
   expect_true(obj$stop())
   expect_false(obj$is_running())
   expect_equal(con$EXISTS(key), 0)
@@ -173,25 +176,39 @@ test_that("connnection failure", {
   period <- 1
   expire <- 2
 
+  con <- redux::hiredis()
+
   expect_error(
     heartbeat(key, period, expire = expire, port = 9999, start = TRUE),
-    "Error creating heartbeat thread")
+    "Failed to create heartbeat: redis connection failed")
+  expect_equal(con$EXISTS(key), 0)
+
   expect_error(
     heartbeat(key, period, expire = expire, password = "yo", start = TRUE),
-    "Error creating heartbeat thread")
+    "Failed to create heatbeat: authentication refused")
+  expect_equal(con$EXISTS(key), 0)
+
   expect_error(
     heartbeat(key, period, expire = expire, db = 99, start = TRUE),
-    "Error creating heartbeat thread")
+    "Failed to create heatbeat: could not SELECT db")
+  expect_equal(con$EXISTS(key), 0)
+
+  expect_error(
+    heartbeat(key, period, timeout = 0),
+    "Failed to create heartbeat: did not come up in time")
+  Sys.sleep(0.25)
+  expect_equal(con$EXISTS(key), 0)
 
   skip_if_not_isolated_redis()
   password <- "yolo"
-  con <- redux::hiredis()
   con$CONFIG_SET("requirepass", password)
   con$AUTH(password)
   on.exit(con$CONFIG_SET("requirepass", ""))
   expect_error(
     heartbeat(key, period, expire = expire, start = TRUE),
-    "Error creating heartbeat thread")
+    "Failed to create heatbeat: could not SET (password required?)",
+    fixed = TRUE)
+  expect_equal(con$EXISTS(key), 0)
 })
 
 test_that("invalid times", {
@@ -223,11 +240,4 @@ test_that("print", {
 })
 
 test_that("ungraceful exit", {
-  skip_if_no_redis()
-  key <- "heartbeat_key:ungraceful"
-  period <- 1
-  expect_error(heartbeat(key, period, timeout = 0),
-               "Error creating heartbeat thread")
-  Sys.sleep(0.25)
-  expect_equal(redux::hiredis()$EXISTS(key), 0)
 })
