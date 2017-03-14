@@ -35,6 +35,7 @@ payload * controller_create(heartbeat_data *data) {
       return x;
     } else if (!x->keep_going) {
       std::free(x);
+      x = NULL;
       break;
     }
     std::this_thread::sleep_for(std::chrono::milliseconds(every));
