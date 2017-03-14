@@ -2,7 +2,7 @@
 
 [![Build Status](https://travis-ci.org/richfitz/heartbeatr.png?branch=master)](https://travis-ci.org/richfitz/heartbeatr)
 
-This only exists as a separate package so that `rrqueue` remains easy to install; eventually this will fold into one of the Redis packages or into `rrqueue`.
+If you run a long running calculation on a remote machine your calculation can fail if the machine falls over, the network goes down, or your code crashes R.  This package provides a "heartbeat" service that uses Redis to periodically prevent a key from expiring, forming a [dead man's switch](https://en.wikipedia.org/wiki/Dead_man%27s_switch).  You can then monitor the key to detect failure in your process and requeue/rerun/investigate as appropriate.
 
 ## Installation
 
