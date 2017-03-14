@@ -33,5 +33,7 @@ check_all:
 
 clean:
 	rm -f src/*.o src/*.so
+	rm -rf src/heartbeatr.so.dSYM
+	./cleanup
 
 .PHONY: clean all test document install
