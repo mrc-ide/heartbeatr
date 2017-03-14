@@ -13,7 +13,7 @@
 // approach and so this uses a naked pointer C-style programming
 // approach.
 
-payload * controller_create(heartbeat_data *data) {
+payload * controller_create(heartbeat_data *data, double timeout) {
   // I do not know what in here is throwable but in general I can't
   // have things throwing!  This might all need to go in a big
   // try/catch.
@@ -28,8 +28,9 @@ payload * controller_create(heartbeat_data *data) {
   std::thread t(worker_create, x);
   t.detach();
   // Wait for things to come up
-  size_t every = 10;
-  size_t n = x->data->expire * 1000 / every + 1;
+  size_t time_poll = 10; // must go into 1000 nicely
+  size_t timeout_ms = ceil(timeout * 1000);
+  size_t n = timeout_ms / time_poll;
   for (size_t i = 0; i < n; ++i) {
     if (x->started) {
       return x;
@@ -38,11 +39,9 @@ payload * controller_create(heartbeat_data *data) {
       x = NULL;
       break;
     }
-    std::this_thread::sleep_for(std::chrono::milliseconds(every));
+    std::this_thread::sleep_for(std::chrono::milliseconds(time_poll));
   }
-  // Didn't start but also didn't actively fail; try to recover as
-  // best we can?  Not sure what can be done here, so I'm going to
-  // prefer leaking to crashing and think about this later.
+  // We did not come up in time!
   if (x) {
     x->orphaned = false;
     x->keep_going = false;
@@ -70,7 +69,7 @@ bool controller_stop(payload *x, bool wait, double timeout) {
     if (wait) {
       size_t time_poll = 10; // must go into 1000 nicely
       size_t timeout_ms = ceil(timeout * 1000);
-      size_t n = timeout_ms / time_poll + 1;
+      size_t n = timeout_ms / time_poll;
       for (size_t i = 0; i < n; ++i) {
         if (x->stopped) {
           std::free(x);
@@ -80,6 +79,7 @@ bool controller_stop(payload *x, bool wait, double timeout) {
         std::this_thread::sleep_for(std::chrono::milliseconds(time_poll));
       }
     }
+    std::free((void*) key_signal);
   }
   return status;
 }

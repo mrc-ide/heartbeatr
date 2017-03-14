@@ -169,7 +169,7 @@ test_that("pointer handling", {
 
 test_that("connnection failure", {
   skip_if_no_redis()
-  key <- "heartbeat_key:basic"
+  key <- "heartbeat_key:confail"
   period <- 1
   expire <- 2
 
@@ -192,4 +192,42 @@ test_that("connnection failure", {
   expect_error(
     heartbeat(key, period, expire = expire, start = TRUE),
     "Error creating heartbeat thread")
+})
+
+test_that("invalid times", {
+  key <- "heartbeat_key:confail"
+  period <- 10
+  expect_error(heartbeat(key, period, expire = period),
+               "expire must be longer than period")
+  expect_error(heartbeat(key, period, expire = period - 1),
+               "expire must be longer than period")
+})
+
+test_that("positive timeout", {
+  skip_if_no_redis()
+  key <- "heartbeat_key:basic"
+  period <- 1
+  obj <- heartbeat(key, period, start = FALSE)
+  expect_error(obj$stop(wait = TRUE, timeout = -1), "timeout must be positive")
+})
+
+test_that("print", {
+  skip_if_no_redis()
+  key <- "heartbeat_key:print"
+  period <- 1
+  obj <- heartbeat(key, period, start = FALSE)
+  str <- capture.output(tmp <- print(obj))
+  expect_identical(tmp, obj)
+  expect_match(str, "<heartbeat>", fixed = TRUE, all = FALSE)
+  expect_match(str, "running: false", fixed = TRUE, all = FALSE)
+})
+
+test_that("ungraceful exit", {
+  skip_if_no_redis()
+  key <- "heartbeat_key:ungraceful"
+  period <- 1
+  expect_error(heartbeat(key, period, timeout = 0),
+               "Error creating heartbeat thread")
+  Sys.sleep(0.25)
+  expect_equal(redux::hiredis()$EXISTS(key), 0)
 })

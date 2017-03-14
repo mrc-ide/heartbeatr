@@ -11,6 +11,7 @@ R6_heartbeat <- R6::R6Class(
       assert_scalar_character(key)
       assert_scalar_character(value)
       assert_scalar_positive_integer(port)
+      assert_scalar_positive_integer(db, TRUE)
       assert_scalar_positive_integer(expire)
       assert_scalar_positive_integer(period)
 
@@ -45,22 +46,25 @@ R6_heartbeat <- R6::R6Class(
       if (is.null(private$ptr)) {
         FALSE
       } else {
-        running <- .Call(heartbeat_running, private$ptr)
-        if (!running) {
-          private$ptr <- NULL
-        }
-        running
+        ## I don't know that this is sensible or not; if this returns
+        ## FALSE then it does not mean that the heartbeat is
+        ## *absolutely* running because it could have died in the
+        ## meantime and we don't check here for the key.  So this
+        ## probably needs expanding but it requires a better knowledge
+        ## of the real-life failure modes.
+        .Call(heartbeat_running, private$ptr)
       }
     },
 
-    start = function() {
+    start = function(timeout = 10) {
       if (self$is_running()) {
         stop("Already running on key ", private$key)
       }
+      assert_scalar_numeric(timeout)
       private$ptr <- .Call(heartbeat_create, private$host, private$port,
                            private$password, private$db,
                            private$key, private$value, private$key_signal,
-                           private$expire, private$period)
+                           private$expire, private$period, timeout)
       invisible(self)
     },
 
@@ -128,18 +132,22 @@ R6_heartbeat <- R6::R6Class(
 ##'   expiry time, so the time since last heartbeat can be computed.
 ##' @param host Redis host to use (by default localhost)
 ##' @param port Redis port to use (by default 6379)
-##' @param start Should the heartbeat be started immediately?
-##' @param password Optional password used (via the \code{AUTH} command
-##'   before any redis commands are run on the server
+##' @param password Optional password used (via the \code{AUTH}
+##'   command before any redis commands are run on the server
 ##' @param db Database to connect to (if not the default).
+##' @param start Should the heartbeat be started immediately?
+##' @param timeout Time, in seconds, to wait for the heartbeat to
+##'   appear.  It should generally appear very quickly (within a
+##'   second unless your connection is very slow) so this can be
+##'   generally left alone.
 ##' @export
 heartbeat <- function(key, period, expire = 3 * period, value = expire,
                       host = "localhost", port = 6379L,
-                      password = NULL, db = NULL, start = TRUE) {
+                      password = NULL, db = NULL, start = TRUE, timeout = 10) {
   ret <- R6_heartbeat$new(host, port, password %||% "", db %||% 0L, key,
                           as.character(value), period, expire)
   if (start) {
-    ret$start()
+    ret$start(timeout)
   }
   ret
 }

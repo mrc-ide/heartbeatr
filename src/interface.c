@@ -13,18 +13,19 @@ payload * controller_get(SEXP ext_ptr, bool closed_error);
 // this only.
 SEXP r_heartbeat_create(SEXP r_host, SEXP r_port, SEXP r_password, SEXP r_db,
                         SEXP r_key, SEXP r_value, SEXP r_key_signal,
-                        SEXP r_expire, SEXP r_interval) {
+                        SEXP r_expire, SEXP r_interval, SEXP r_timeout) {
   const char
-    *host = scalar_string(r_host, "host"),
-    *password = scalar_string(r_password, "password"),
-    *key = scalar_string(r_key, "key"),
-    *value = scalar_string(r_value, "value"),
-    *key_signal = scalar_string(r_key_signal, "key_signal");
+    *host = scalar_string(r_host),
+    *password = scalar_string(r_password),
+    *key = scalar_string(r_key),
+    *value = scalar_string(r_value),
+    *key_signal = scalar_string(r_key_signal);
   int
-    port = scalar_integer(r_port, "port"),
-    db = scalar_integer(r_db, "db"),
-    expire = scalar_integer(r_expire, "expire"),
-    interval = scalar_integer(r_interval, "interval");
+    port = scalar_integer(r_port),
+    db = scalar_integer(r_db),
+    expire = scalar_integer(r_expire),
+    interval = scalar_integer(r_interval);
+  double timeout = scalar_numeric(r_timeout);
 
   heartbeat_data *data = heartbeat_data_alloc(host, port, password, db,
                                               key, value, key_signal,
@@ -32,7 +33,7 @@ SEXP r_heartbeat_create(SEXP r_host, SEXP r_port, SEXP r_password, SEXP r_db,
   if (data == NULL) {
     Rf_error("Failure allocating memory"); // # nocov
   }
-  void * ptr = controller_create(data);
+  void * ptr = controller_create(data, timeout);
 
   if (ptr == NULL) {
     Rf_error("Error creating heartbeat thread (probably connection failure)");
@@ -47,9 +48,9 @@ SEXP r_heartbeat_create(SEXP r_host, SEXP r_port, SEXP r_password, SEXP r_db,
 SEXP r_heartbeat_stop(SEXP ext_ptr, SEXP r_closed_error, SEXP r_wait,
                       SEXP r_timeout) {
   bool
-    closed_error = scalar_logical(r_closed_error, "closed_error"),
-    wait = scalar_logical(r_wait, "wait");
-  double timeout = scalar_numeric(r_timeout, "timeout");
+    closed_error = scalar_logical(r_closed_error),
+    wait = scalar_logical(r_wait);
+  double timeout = scalar_numeric(r_timeout);
   payload *ptr = controller_get(ext_ptr, closed_error);
   bool exists = ptr != NULL;
   if (exists) {
@@ -85,9 +86,9 @@ payload * controller_get(SEXP ext_ptr, bool closed_error) {
 }
 
 static R_CallMethodDef call_methods[]  = {
-  {"heartbeat_create",  (DL_FUNC) &r_heartbeat_create,  9},
-  {"heartbeat_stop",    (DL_FUNC) &r_heartbeat_stop,    4},
-  {"heartbeat_running", (DL_FUNC) &r_heartbeat_running, 1},
+  {"heartbeat_create",  (DL_FUNC) &r_heartbeat_create,  10},
+  {"heartbeat_stop",    (DL_FUNC) &r_heartbeat_stop,     4},
+  {"heartbeat_running", (DL_FUNC) &r_heartbeat_running,  1},
   {NULL, NULL, 0}
 };
 

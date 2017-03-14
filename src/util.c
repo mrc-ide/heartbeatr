@@ -13,30 +13,18 @@ char * string_duplicate(const char * x) {
   return ret;
 }
 
-const char * scalar_string(SEXP x, const char * name) {
-  if (TYPEOF(x) != STRSXP || length(x) != 1) {
-    Rf_error("Expected a scalar string for %s", name);
-  }
+const char * scalar_string(SEXP x) {
   return CHAR(STRING_ELT(x, 0));
 }
 
-int scalar_integer(SEXP x, const char * name) {
-  if (TYPEOF(x) != INTSXP || length(x) != 1) {
-    Rf_error("Expected a scalar integer for %s", name);
-  }
+int scalar_integer(SEXP x) {
   return INTEGER(x)[0];
 }
 
-bool scalar_logical(SEXP x, const char * name) {
-  if (TYPEOF(x) != LGLSXP || length(x) != 1) {
-    Rf_error("Expected a scalar logical for %s", name);
-  }
+bool scalar_logical(SEXP x) {
   return INTEGER(x)[0] != 0;
 }
 
-double scalar_numeric(SEXP x, const char * name) {
-  if (TYPEOF(x) != REALSXP || length(x) != 1) {
-    Rf_error("Expected a scalar numeric for %s", name);
-  }
+double scalar_numeric(SEXP x) {
   return REAL(x)[0];
 }

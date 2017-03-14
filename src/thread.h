@@ -7,7 +7,7 @@
 extern "C" {
 #endif
 
-payload * controller_create(heartbeat_data *data);
+payload * controller_create(heartbeat_data *data, double timeout);
 bool controller_stop(payload *x, bool wait, double timeout);
 
 #ifdef __cplusplus
