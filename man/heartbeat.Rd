@@ -6,7 +6,7 @@
 \usage{
 heartbeat(key, period, expire = 3 * period, value = expire,
   host = "localhost", port = 6379L, password = NULL, db = NULL,
-  start = TRUE)
+  start = TRUE, timeout = 10)
 }
 \arguments{
 \item{key}{Key to use}
@@ -22,12 +22,17 @@ expiry time, so the time since last heartbeat can be computed.}
 
 \item{port}{Redis port to use (by default 6379)}
 
-\item{password}{Optional password used (via the \code{AUTH} command
-before any redis commands are run on the server}
+\item{password}{Optional password used (via the \code{AUTH}
+command before any redis commands are run on the server}
 
 \item{db}{Database to connect to (if not the default).}
 
 \item{start}{Should the heartbeat be started immediately?}
+
+\item{timeout}{Time, in seconds, to wait for the heartbeat to
+appear.  It should generally appear very quickly (within a
+second unless your connection is very slow) so this can be
+generally left alone.}
 }
 \description{
 Create a heartbeat instance.  This can be used by running
