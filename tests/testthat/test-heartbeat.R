@@ -2,6 +2,7 @@ context("heartbeat")
 
 test_that("basic", {
   skip_if_no_redis()
+  config <- redux::redis_config()
   key <- "heartbeat_key:basic"
   period <- 1
   expire <- 2
@@ -136,12 +137,26 @@ test_that("dying process", {
 
   con <- redux::hiredis()
   expire <- 2
+  host <- con$config()$host
+  port <- con$config()$port
 
   key <- "heartbeat_key:die"
   Rscript <- file.path(R.home(), "bin", "Rscript")
-  px <- processx::process$new(Rscript,
-                              c("run-heartbeat.R", key, 1, expire, 600))
-  Sys.sleep(0.5)
+  args <- c("run-heartbeat.R", host, port, key, 1, expire, 600)
+  px <- processx::process$new(Rscript, args)
+
+  timeout <- 2
+  dt <- 0.01
+  for (i in seq_len(timeout / dt)) {
+    if (con$EXISTS(key) == 1) {
+      break
+    }
+    if (!px$is_alive()) {
+      break
+    }
+    Sys.sleep(dt)
+  }
+
   expect_equal(con$EXISTS(key), 1)
   px$kill(0)
   Sys.sleep(0.5)
