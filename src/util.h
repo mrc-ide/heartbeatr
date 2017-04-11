@@ -2,13 +2,12 @@
 #define HEARTBEAT_UTIL_H
 
 #include <stdbool.h>
+#include <R.h>
+#include <Rinternals.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include <R.h>
-#include <Rinternals.h>
 
 char * string_duplicate(const char * x);
 const char * scalar_string(SEXP x);
