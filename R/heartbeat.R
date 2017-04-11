@@ -142,8 +142,13 @@ R6_heartbeat <- R6::R6Class(
 ##'   generally left alone.
 ##' @export
 heartbeat <- function(key, period, expire = 3 * period, value = expire,
-                      host = "localhost", port = 6379L,
+                      host = NULL, port = NULL,
                       password = NULL, db = NULL, start = TRUE, timeout = 10) {
+  ## TODO: this is not quite enough because redux can also pick up on
+  ## password and db information from REDIS_URL.  I can directly
+  ## depend on redux here and that would be somewhat nicer.
+  host <- host %||% Sys.getenv("REDIS_HOST", "127.0.0.1")
+  port <- port %||% as.integer(Sys.getenv("REDIS_PORT", 6379))
   ret <- R6_heartbeat$new(host, port, password %||% "", db %||% 0L, key,
                           as.character(value), period, expire)
   if (start) {
