@@ -49,22 +49,15 @@ void heartbeat_data_free(heartbeat_data * data) {
 
 redisContext * heartbeat_connect(const heartbeat_data * data,
                                  heartbeat_connection_status * status) {
-  // TODO:
-  //
-  // There are several places where things can fail and at present no
-  // hint is given as to what the underlying problem is:
-  //
-  // * failure in initial connection (FAILED)
-  // * failure in password (AUTH)
-  // * failure in selecting db (DB)
-  // * failure in setting the key (SET)
-  //
-  // We can accept a pointer to this function that we can shepherd
-  // back into the calling function via the payload while remaining
-  // threadsafe.
   redisContext *con = redisConnect(data->host, data->port);
   if (con->err) {
     *status = FAILURE_CONNECT;
+    // If running into trouble, it may be useful to print the error like so:
+    //
+    //   REprintf("Redis connection failure: %s", con->errstr);
+    //
+    // However, this will not end up in the actual error message and
+    // may be hard to capture, suppress or work with.
     redisFree(con);
     return NULL;
   }
