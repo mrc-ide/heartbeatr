@@ -4,9 +4,8 @@
 \alias{heartbeat}
 \title{Create a heartbeat instance}
 \usage{
-heartbeat(key, period, expire = 3 * period, value = expire,
-  host = "localhost", port = 6379L, password = NULL, db = NULL,
-  start = TRUE, timeout = 10)
+heartbeat(key, period, expire = 3 * period, value = expire, host = NULL,
+  port = NULL, password = NULL, db = NULL, start = TRUE, timeout = 10)
 }
 \arguments{
 \item{key}{Key to use}
