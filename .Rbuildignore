@@ -2,3 +2,4 @@
 ^\.travis\.yml$
 ^heartbeatr_.*\.tar.gz$
 ^TODO\.md$
+^appveyor\.yml$
