@@ -4,6 +4,10 @@
 #include "util.h"
 #include <R_ext/Rdynload.h>
 
+#ifdef _WIN32
+#include <winsock2.h>
+#endif
+
 static void r_heartbeat_finalize(SEXP ext_ptr);
 payload * controller_get(SEXP ext_ptr, bool closed_error);
 void throw_connection_error(heartbeat_connection_status status);
@@ -119,5 +123,9 @@ static R_CallMethodDef call_methods[]  = {
 };
 
 void R_init_heartbeatr(DllInfo *info) {
+#ifdef _WIN32
+  WSADATA wsaData;
+  WSAStartup(MAKEWORD(2, 2), &wsaData);
+#endif
   R_registerRoutines(info, NULL, call_methods, NULL, NULL);
 }
