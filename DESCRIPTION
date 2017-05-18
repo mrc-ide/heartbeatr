@@ -12,9 +12,8 @@ Imports:
     R6
 Suggests:
     processx,
-    redux (>= 0.5.1),
+    redux (>= 1.0.0),
     testthat
 RoxygenNote: 5.0.1
 Remotes:
-  r-pkgs/processx,
-  richfitz/redux
+  r-pkgs/processx
