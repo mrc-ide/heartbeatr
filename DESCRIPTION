@@ -7,7 +7,7 @@ Description: Simple heartbeat support for R using 'Redis'.
 Depends:
     R (>= 3.1.2)
 License: BSD_2_clause + file LICENSE
-SystemDepends: C++11, libhiredis, redis-server
+SystemRequirements: C++11, libhiredis, redis-server
 Imports:
     R6
 Suggests:
