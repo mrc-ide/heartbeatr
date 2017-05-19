@@ -5,7 +5,7 @@
 extern "C" {
 #endif
 
-#include <hiredis/hiredis.h>
+#include <hiredis.h>
 #include <stdbool.h>
 
 // This is the bits required to communicate with Redis; the
