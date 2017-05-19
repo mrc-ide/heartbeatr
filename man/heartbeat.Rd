@@ -4,8 +4,8 @@
 \alias{heartbeat}
 \title{Create a heartbeat instance}
 \usage{
-heartbeat(key, period, expire = 3 * period, value = expire, host = NULL,
-  port = NULL, password = NULL, db = NULL, start = TRUE, timeout = 10)
+heartbeat(key, period, expire = 3 * period, value = expire, config = NULL,
+  start = TRUE, timeout = 10)
 }
 \arguments{
 \item{key}{Key to use}
@@ -17,14 +17,12 @@ heartbeat(key, period, expire = 3 * period, value = expire, host = NULL,
 \item{value}{Value to store in the key.  By default it stores the
 expiry time, so the time since last heartbeat can be computed.}
 
-\item{host}{Redis host to use (by default localhost)}
-
-\item{port}{Redis port to use (by default 6379)}
-
-\item{password}{Optional password used (via the \code{AUTH}
-command before any redis commands are run on the server}
-
-\item{db}{Database to connect to (if not the default).}
+\item{config}{Configuration parameters passed through to
+\code{redux::redis_config}.  Provide as either a named list or a
+\code{redis_config} object.  This allows host, port, password,
+db, etc all to be set.  Socket connections (i.e., using
+\code{path} to access Redis over a socket) are not currently
+supported.}
 
 \item{start}{Should the heartbeat be started immediately?}
 
@@ -56,4 +54,3 @@ The heartbeat object has three methods:
 
 Heavily inspired by the \code{doRedis} package.
 }
-

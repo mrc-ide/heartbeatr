@@ -98,7 +98,8 @@ test_that("auth", {
 
   period <- 1
   expire <- 2
-  obj <- heartbeat(key, period, expire = expire, password = password)
+  obj <- heartbeat(key, period, expire = expire,
+                   config = list(password = password))
   expect_is(obj, "heartbeat")
   expect_is(obj, "R6")
   expect_true(obj$is_running())
@@ -119,7 +120,7 @@ test_that("db", {
 
   period <- 1
   expire <- 2
-  obj <- heartbeat(key, period, expire = expire, db = db)
+  obj <- heartbeat(key, period, expire = expire, config = list(db = db))
 
   expect_is(obj, "heartbeat")
   expect_is(obj, "R6")
@@ -194,17 +195,20 @@ test_that("connnection failure", {
   con <- redux::hiredis()
 
   expect_error(
-    heartbeat(key, period, expire = expire, port = 9999, start = TRUE),
+    heartbeat(key, period, expire = expire,
+              config = list(port = 9999), start = TRUE),
     "Failed to create heartbeat: redis connection failed")
   expect_equal(con$EXISTS(key), 0)
 
   expect_error(
-    heartbeat(key, period, expire = expire, password = "yo", start = TRUE),
+    heartbeat(key, period, expire = expire,
+              config = list(password = "yo"), start = TRUE),
     "Failed to create heatbeat: authentication refused")
   expect_equal(con$EXISTS(key), 0)
 
   expect_error(
-    heartbeat(key, period, expire = expire, db = 99, start = TRUE),
+    heartbeat(key, period, expire = expire,
+              config = list(db = 99), start = TRUE),
     "Failed to create heatbeat: could not SELECT db")
   expect_equal(con$EXISTS(key), 0)
 
@@ -252,6 +256,15 @@ test_that("print", {
   expect_identical(tmp, obj)
   expect_match(str, "<heartbeat>", fixed = TRUE, all = FALSE)
   expect_match(str, "running: false", fixed = TRUE, all = FALSE)
+})
+
+test_that("disallow socket connection", {
+  key <- "heartbeat_key:socket"
+  period <- 1
+  expect_error(heartbeat(key, period,
+                         config = list(path = tempdir()),
+                         start = FALSE),
+               "Only tcp redis connections are supported")
 })
 
 test_that("ungraceful exit", {

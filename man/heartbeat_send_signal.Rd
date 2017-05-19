@@ -17,4 +17,3 @@ heartbeat_send_signal(con, key, signal)
 \description{
 Sends a signal to a hearbeat process that is using key \code{key}
 }
-
