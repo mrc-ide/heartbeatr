@@ -142,7 +142,7 @@ test_that("dying process", {
   port <- con$config()$port
 
   key <- "heartbeat_key:die"
-  Rscript <- file.path(R.home(), "bin", "Rscript")
+  Rscript <- file.path(R.home("bin"), "Rscript")
   args <- c("run-heartbeat.R", host, port, key, 1, expire, 600)
   px <- processx::process$new(Rscript, args)
 
