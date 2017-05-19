@@ -3,6 +3,7 @@
 #include "thread.h"
 #include "util.h"
 #include <R_ext/Rdynload.h>
+#include <Rversion.h>
 
 #ifdef _WIN32
 #include <winsock2.h>
@@ -128,4 +129,8 @@ void R_init_heartbeatr(DllInfo *info) {
   WSAStartup(MAKEWORD(2, 2), &wsaData);
 #endif
   R_registerRoutines(info, NULL, call_methods, NULL, NULL);
+#if defined(R_VERSION) && R_VERSION >= R_Version(3, 3, 0)
+  R_useDynamicSymbols(info, FALSE);
+  R_forceSymbols(info, TRUE);
+#endif
 }
