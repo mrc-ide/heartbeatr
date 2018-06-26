@@ -15,5 +15,3 @@ Suggests:
     redux (>= 1.0.0),
     testthat
 RoxygenNote: 5.0.1
-Remotes:
-  r-pkgs/processx
