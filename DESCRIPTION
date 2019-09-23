@@ -15,6 +15,3 @@ Suggests:
     redux (>= 0.5.1),
     testthat
 RoxygenNote: 5.0.1
-Remotes:
-  gaborscardi/processx,
-  richfitz/redux
