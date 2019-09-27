@@ -6,3 +6,5 @@
 ^CONDUCT\.md$
 ^src/.*\.gcda$
 ^src/.*\.gcno$
+^scripts$
+^docs$

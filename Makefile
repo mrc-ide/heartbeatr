@@ -36,4 +36,11 @@ clean:
 	rm -rf src/heartbeatr.so.dSYM
 	./cleanup
 
+pkgdown:
+	${RSCRIPT} -e "library(methods); pkgdown::build_site()"
+	rm -f README.html
+
+website: pkgdown
+	./scripts/update_web.sh
+
 .PHONY: clean all test document install
