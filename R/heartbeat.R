@@ -3,6 +3,8 @@
 R6_heartbeat <- R6::R6Class(
   "heartbeat",
 
+  cloneable = FALSE,
+
   public = list(
     initialize = function(config, key, value, period, expire) {
       assert_scalar_character(key)
