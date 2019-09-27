@@ -2,7 +2,7 @@
 
 [![Project Status: WIP - Initial development is in progress, but there has not yet been a stable, usable release suitable for the public.](http://www.repostatus.org/badges/latest/wip.svg)](http://www.repostatus.org/#wip)
 [![Build Status](https://travis-ci.org/mrc-ide/heartbeatr.svg?branch=master)](https://travis-ci.org/mrc-ide/heartbeatr)
-[![AppVeyor Build Status](https://ci.appveyor.com/api/projects/status/github/richfitz/heartbeatr?branch=master&svg=true)](https://ci.appveyor.com/project/richfitz/heartbeatr)
+[![AppVeyor Build status](https://ci.appveyor.com/api/projects/status/8s3iel9x9low0lfp/branch/master?svg=true)](https://ci.appveyor.com/project/richfitz/heartbeatr/branch/master)
 [![codecov.io](https://codecov.io/github/mrc-ide/heartbeatr/coverage.svg?branch=master)](https://codecov.io/github/mrc-ide/heartbeatr?branch=master)
 
 If you run a long running calculation on a remote machine your calculation can fail if the machine falls over, the network goes down, or your code crashes R.  This package provides a "heartbeat" service that uses Redis to periodically prevent a key from expiring, forming a [dead man's switch](https://en.wikipedia.org/wiki/Dead_man%27s_switch).  You can then monitor the key to detect failure in your process and re-queue/rerun/investigate as appropriate.
