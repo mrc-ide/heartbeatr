@@ -103,6 +103,7 @@ R6_heartbeat <- R6::R6Class(
     value = NULL
   ))
 
+
 ##' Create a heartbeat instance.  This can be used by running
 ##' \code{obj$start()} which will reset the TTL on \code{key} every
 ##' \code{period} seconds (don't set this too high).  If the R process
@@ -118,7 +119,7 @@ R6_heartbeat <- R6::R6Class(
 ##'
 ##' \item \code{start()} which starts a heartbeat
 ##'
-##' \item \code{stop()} which requess a stops for the heartbeat
+##' \item \code{stop()} which requests a stop for the heartbeat
 ##'
 ##' }
 ##'
@@ -141,6 +142,29 @@ R6_heartbeat <- R6::R6Class(
 ##'   second unless your connection is very slow) so this can be
 ##'   generally left alone.
 ##' @export
+##' @examples
+##'
+##' if (redux::redis_available()) {
+##'   rand_str <- function() {
+##'     paste(sample(letters, 20, TRUE), collapse = "")
+##'   }
+##'   key <- sprintf("heartbeatr:test:%s", rand_str())
+##'   h <- heartbeatr::heartbeat(key, 1, expire = 2)
+##'   con <- redux::hiredis()
+##'
+##'   # The heartbeat key exists
+##'   con$EXISTS(key)
+##'
+##'   # And has an expiry of less than 2000ms
+##'   con$PTTL(key)
+##'
+##'   # We can manually stop the heartbeat, and 2s later the key will
+##'   # stop existing
+##'   h$stop()
+##'
+##'   # Sys.sleep(2)
+##'   # con$EXISTS(key) # 0
+##' }
 heartbeat <- function(key, period, expire = 3 * period, value = expire,
                       config = NULL, start = TRUE, timeout = 10) {
   ret <- R6_heartbeat$new(config, key, as.character(value), period, expire)
@@ -150,17 +174,33 @@ heartbeat <- function(key, period, expire = 3 * period, value = expire,
   ret
 }
 
-##' Sends a signal to a hearbeat process that is using key \code{key}
+
+##' Sends a signal to a heartbeat process that is using key \code{key}
 ##' @title Send a signal
 ##' @param key The heartbeat key
 ##' @param signal A signal to send (e.g. \code{tools::SIGINT} or
 ##'   \code{tools::SIGKILL})
 ##' @param con A hiredis object
 ##' @export
+##' @examples
+##' if (redux::redis_available()) {
+##'   rand_str <- function() {
+##'     paste(sample(letters, 20, TRUE), collapse = "")
+##'   }
+##'   # Suppose we have a process that exposes a heartbeat running on
+##'   # this key:
+##'   key <- sprintf("heartbeatr:test:%s", rand_str())
+##'
+##'   # We can send it an interrupt over redis using:
+##'   con <- redux::hiredis()
+##'   heartbeatr::heartbeat_send_signal(con, key, tools::SIGINT)
+##' }
 heartbeat_send_signal <- function(con, key, signal) {
   assert_scalar_character(key)
   con$RPUSH(heartbeat_key_signal(key), signal)
+  invisible()
 }
+
 
 heartbeat_key_signal <- function(key) {
   paste0(key, ":signal")

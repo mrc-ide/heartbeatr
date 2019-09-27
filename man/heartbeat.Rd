@@ -4,8 +4,8 @@
 \alias{heartbeat}
 \title{Create a heartbeat instance}
 \usage{
-heartbeat(key, period, expire = 3 * period, value = expire, config = NULL,
-  start = TRUE, timeout = 10)
+heartbeat(key, period, expire = 3 * period, value = expire,
+  config = NULL, start = TRUE, timeout = 10)
 }
 \arguments{
 \item{key}{Key to use}
@@ -48,9 +48,33 @@ The heartbeat object has three methods:
 
 \item \code{start()} which starts a heartbeat
 
-\item \code{stop()} which requess a stops for the heartbeat
+\item \code{stop()} which requests a stop for the heartbeat
 
 }
 
 Heavily inspired by the \code{doRedis} package.
+}
+\examples{
+
+if (redux::redis_available()) {
+  rand_str <- function() {
+    paste(sample(letters, 20, TRUE), collapse = "")
+  }
+  key <- sprintf("heartbeatr:test:\%s", rand_str())
+  h <- heartbeatr::heartbeat(key, 1, expire = 2)
+  con <- redux::hiredis()
+
+  # The heartbeat key exists
+  con$EXISTS(key)
+
+  # And has an expiry of less than 2000ms
+  con$PTTL(key)
+
+  # We can manually stop the heartbeat, and 2s later the key will
+  # stop existing
+  h$stop()
+
+  # Sys.sleep(2)
+  # con$EXISTS(key) # 0
+}
 }

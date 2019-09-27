@@ -22,6 +22,6 @@ Suggests:
     processx,
     redux (>= 1.0.0),
     testthat
-RoxygenNote: 5.0.1
+RoxygenNote: 6.1.1
 Encoding: UTF-8
 Language: en-GB
