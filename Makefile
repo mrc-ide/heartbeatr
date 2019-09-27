@@ -32,7 +32,7 @@ check_all:
 	${RSCRIPT} -e "rcmdcheck::rcmdcheck(args = c('--as-cran', '--no-manual'))"
 
 clean:
-	rm -f src/*.o src/*.so
+	rm -f src/*.o src/*.so src/*.gcda src/*.gcno
 	rm -rf src/heartbeatr.so.dSYM
 	./cleanup
 
