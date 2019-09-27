@@ -5,8 +5,6 @@ Authors@R: c(person("Rich", "FitzJohn", role = c("aut", "cre"),
                     email = "rich.fitzjohn@gmail.com"),
              person("Imperial College of Science, Technology and Medicine",
                     role = "cph"))
-Author: Rich FitzJohn
-Maintainer: Rich FitzJohn <rich.fitzjohn@gmail.com>
 Description: Simple heartbeat support for R using 'Redis'. A heartbeat
     is a background thread that acts as a dead-man's switch. It will
     create a key on Redis that will automatically expire after a
