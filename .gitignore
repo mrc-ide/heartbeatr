@@ -9,3 +9,4 @@ src/heartbeatr.so.dSYM
 windows
 src/Makevars
 docs
+heartbeatr_*.tar.gz
