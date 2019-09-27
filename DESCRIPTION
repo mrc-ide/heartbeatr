@@ -13,7 +13,7 @@ Description: Simple heartbeat support for R using 'Redis'. A heartbeat
     number of seconds and then periodically refresh that key, even
     when the R process is busy. If the process dies for some reason,
     then the key will disappear. A heartbeat can be used to detect
-    loss of worker processes on shared systems
+    loss of worker processes on shared systems.
 License: MIT + file LICENSE
 SystemRequirements: C++11, libhiredis, redis-server
 Imports:
