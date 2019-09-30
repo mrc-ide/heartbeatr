@@ -13,6 +13,8 @@ Description: Simple heartbeat support for R using 'Redis'. A heartbeat
     then the key will disappear. A heartbeat can be used to detect
     loss of worker processes on shared systems.
 License: MIT + file LICENSE
+URL: https://github.com/mrc-ide/heartbeatr
+BugReports: https://github.com/mrc-ide/heartbeatr/issues
 SystemRequirements: C++11, libhiredis, redis-server
 Imports:
     R6
