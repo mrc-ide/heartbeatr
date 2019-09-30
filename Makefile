@@ -8,7 +8,7 @@ test:
 	${RSCRIPT} -e 'library(methods); devtools::test()'
 
 test_all:
-	REMAKE_TEST_INSTALL_PACKAGES=true make test
+	HEARTBEAT_ISOLATED_REDIS=true make test
 
 roxygen:
 	@mkdir -p man
