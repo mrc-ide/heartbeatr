@@ -17,10 +17,10 @@ URL: https://github.com/mrc-ide/heartbeatr
 BugReports: https://github.com/mrc-ide/heartbeatr/issues
 SystemRequirements: C++11, libhiredis, redis-server
 Imports:
-    R6
+    R6,
+    redux (>= 1.0.0)
 Suggests:
     processx,
-    redux (>= 1.0.0),
     testthat
 RoxygenNote: 6.1.1
 Encoding: UTF-8
