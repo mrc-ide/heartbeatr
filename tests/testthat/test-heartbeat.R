@@ -266,6 +266,3 @@ test_that("disallow socket connection", {
                          start = FALSE),
                "Only tcp redis connections are supported")
 })
-
-test_that("ungraceful exit", {
-})
