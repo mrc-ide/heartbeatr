@@ -27,7 +27,7 @@ install.packges("heartbeatr")
 It is also possible to install directly from GitHub using `remotes` as
 
 ``` r
-remotes::install_gituhb("mrc-ide/heartbeatr", ugprade = FALSE)
+remotes::install_github("mrc-ide/heartbeatr", ugprade = FALSE)
 ```
 
 ## License
