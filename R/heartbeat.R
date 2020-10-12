@@ -1,6 +1,6 @@
 ##' @importFrom R6 R6Class
 ##' @useDynLib heartbeatr, .registration = TRUE
-R6_heartbeat <- R6::R6Class(
+heartbeat_ <- R6::R6Class(
   "heartbeat",
 
   cloneable = FALSE,
@@ -167,7 +167,7 @@ R6_heartbeat <- R6::R6Class(
 ##' }
 heartbeat <- function(key, period, expire = 3 * period, value = expire,
                       config = NULL, start = TRUE, timeout = 10) {
-  ret <- R6_heartbeat$new(config, key, as.character(value), period, expire)
+  ret <- heartbeat_$new(config, key, as.character(value), period, expire)
   if (start) {
     ret$start(timeout)
   }
