@@ -8,3 +8,4 @@
 ^src/.*\.gcno$
 ^scripts$
 ^docs$
+^\.github$
