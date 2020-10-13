@@ -46,6 +46,13 @@ jobs:
         with:
           redis-version: "4.x"
 
+      - name: [Windows] Start Redis
+        if: runner.os == 'Windows'
+        run: |
+          nuget install redis-64 -excludeversion
+          redis-64\redis-server.exe --service-install
+          redis-64\redis-server.exe --service-start
+
       - name: Query dependencies
         run: |
           install.packages('remotes')
