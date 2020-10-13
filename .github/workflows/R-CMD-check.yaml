@@ -46,7 +46,7 @@ jobs:
         with:
           redis-version: "4.x"
 
-      - name: [Windows] Start Redis
+      - name: "[Windows] Start Redis"
         if: runner.os == 'Windows'
         run: |
           nuget install redis-64 -excludeversion
