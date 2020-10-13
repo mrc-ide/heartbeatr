@@ -4,8 +4,15 @@
 \alias{heartbeat}
 \title{Create a heartbeat instance}
 \usage{
-heartbeat(key, period, expire = 3 * period, value = expire,
-  config = NULL, start = TRUE, timeout = 10)
+heartbeat(
+  key,
+  period,
+  expire = 3 * period,
+  value = expire,
+  config = NULL,
+  start = TRUE,
+  timeout = 10
+)
 }
 \arguments{
 \item{key}{Key to use}
@@ -33,7 +40,7 @@ generally left alone.}
 }
 \description{
 Create a heartbeat instance.  This can be used by running
-\code{obj$start()} which will reset the TTL on \code{key} every
+\code{obj$start()} which will reset the TTL (Time To Live) on \code{key} every
 \code{period} seconds (don't set this too high).  If the R process
 dies, then the key will expire after \code{3 * period} seconds (or
 set \code{expire}) and another application can tell that this R
@@ -42,17 +49,13 @@ instance has died.
 \details{
 The heartbeat object has three methods:
 \itemize{
-
 \item \code{is_running()} which returns \code{TRUE} or
 \code{FALSE} if the heartbeat is/is not running.
-
 \item \code{start()} which starts a heartbeat
-
 \item \code{stop()} which requests a stop for the heartbeat
-
 }
 
-Heavily inspired by the \code{doRedis} package.
+Heavily inspired by the "doRedis" package.
 }
 \examples{
 

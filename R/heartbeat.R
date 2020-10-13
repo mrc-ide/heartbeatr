@@ -105,25 +105,22 @@ heartbeat_ <- R6::R6Class(
 
 
 ##' Create a heartbeat instance.  This can be used by running
-##' \code{obj$start()} which will reset the TTL on \code{key} every
-##' \code{period} seconds (don't set this too high).  If the R process
-##' dies, then the key will expire after \code{3 * period} seconds (or
-##' set \code{expire}) and another application can tell that this R
+##' `obj$start()` which will reset the TTL (Time To Live) on `key` every
+##' `period` seconds (don't set this too high).  If the R process
+##' dies, then the key will expire after `3 * period` seconds (or
+##' set `expire`) and another application can tell that this R
 ##' instance has died.
 ##'
 ##' The heartbeat object has three methods:
-##' \itemize{
 ##'
-##' \item \code{is_running()} which returns \code{TRUE} or
-##' \code{FALSE} if the heartbeat is/is not running.
+##' * `is_running()` which returns `TRUE` or
+##'   `FALSE` if the heartbeat is/is not running.
 ##'
-##' \item \code{start()} which starts a heartbeat
+##' * `start()` which starts a heartbeat
 ##'
-##' \item \code{stop()} which requests a stop for the heartbeat
+##' * `stop()` which requests a stop for the heartbeat
 ##'
-##' }
-##'
-##' Heavily inspired by the \code{doRedis} package.
+##' Heavily inspired by the "doRedis" package.
 ##' @title Create a heartbeat instance
 ##' @param key Key to use
 ##' @param period Timeout period (in seconds)
@@ -131,10 +128,10 @@ heartbeat_ <- R6::R6Class(
 ##' @param value Value to store in the key.  By default it stores the
 ##'   expiry time, so the time since last heartbeat can be computed.
 ##' @param config Configuration parameters passed through to
-##'   \code{redux::redis_config}.  Provide as either a named list or a
-##'   \code{redis_config} object.  This allows host, port, password,
+##'   `redux::redis_config`.  Provide as either a named list or a
+##'   `redis_config` object.  This allows host, port, password,
 ##'   db, etc all to be set.  Socket connections (i.e., using
-##'   \code{path} to access Redis over a socket) are not currently
+##'   `path` to access Redis over a socket) are not currently
 ##'   supported.
 ##' @param start Should the heartbeat be started immediately?
 ##' @param timeout Time, in seconds, to wait for the heartbeat to
@@ -175,11 +172,11 @@ heartbeat <- function(key, period, expire = 3 * period, value = expire,
 }
 
 
-##' Sends a signal to a heartbeat process that is using key \code{key}
+##' Sends a signal to a heartbeat process that is using key `key`
 ##' @title Send a signal
 ##' @param key The heartbeat key
-##' @param signal A signal to send (e.g. \code{tools::SIGINT} or
-##'   \code{tools::SIGKILL})
+##' @param signal A signal to send (e.g. `tools::SIGINT` or
+##'   `tools::SIGKILL`)
 ##' @param con A hiredis object
 ##' @export
 ##' @examples
