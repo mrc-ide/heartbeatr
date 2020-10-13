@@ -41,7 +41,7 @@ jobs:
       - uses: r-lib/actions/setup-pandoc@v1
 
       - name: Start Redis
-        uses: supercharge/redis-github-action@1.1.0
+      - uses: shogo82148/actions-setup-redis@v1
 
       - name: Query dependencies
         run: |
