@@ -55,7 +55,7 @@ The heartbeat object has three methods:
 \item \code{stop()} which requests a stop for the heartbeat
 }
 
-Heavily inspired by the "doRedis" package.
+Heavily inspired by the \code{doRedis} package.
 }
 \examples{
 
