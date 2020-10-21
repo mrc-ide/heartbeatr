@@ -3,3 +3,9 @@
 ^heartbeatr_.*\.tar.gz$
 ^TODO\.md$
 ^appveyor\.yml$
+^CONDUCT\.md$
+^src/.*\.gcda$
+^src/.*\.gcno$
+^scripts$
+^docs$
+^\.github$

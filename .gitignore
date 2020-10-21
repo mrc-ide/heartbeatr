@@ -3,6 +3,10 @@
 .RData
 src/*.o
 src/*.so
+src/*.gcda
+src/*.gcno
 src/heartbeatr.so.dSYM
 windows
 src/Makevars
+docs
+heartbeatr_*.tar.gz

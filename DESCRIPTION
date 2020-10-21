@@ -1,17 +1,28 @@
 Package: heartbeatr
 Title: Heartbeat Support using 'Redis'
-Version: 0.4.0
-Author: Rich FitzJohn
-Maintainer: Rich FitzJohn <rich.fitzjohn@gmail.com>
-Description: Simple heartbeat support for R using 'Redis'.
-Depends:
-    R (>= 3.1.2)
-License: BSD_2_clause + file LICENSE
+Version: 0.4.1
+Authors@R: c(person("Rich", "FitzJohn", role = c("aut", "cre"),
+                    email = "rich.fitzjohn@gmail.com"),
+             person("Imperial College of Science, Technology and Medicine",
+                    role = "cph"))
+Description: Simple heartbeat support for R using 'Redis'. A heartbeat
+    is a background thread that acts as a dead-man's switch. It will
+    create a key on Redis that will automatically expire after a
+    number of seconds and then periodically refresh that key, even
+    when the R process is busy. If the process dies for some reason,
+    then the key will disappear. A heartbeat can be used to detect
+    loss of worker processes on shared systems.
+License: MIT + file LICENSE
+URL: https://github.com/mrc-ide/heartbeatr
+BugReports: https://github.com/mrc-ide/heartbeatr/issues
 SystemRequirements: C++11, libhiredis, redis-server
 Imports:
-    R6
+    R6,
+    redux (>= 1.0.0)
 Suggests:
     processx,
-    redux (>= 1.0.0),
     testthat
-RoxygenNote: 5.0.1
+RoxygenNote: 7.1.1
+Roxygen: list(markdown = TRUE)
+Encoding: UTF-8
+Language: en-GB

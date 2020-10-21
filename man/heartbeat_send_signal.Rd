@@ -15,5 +15,19 @@ heartbeat_send_signal(con, key, signal)
 \code{tools::SIGKILL})}
 }
 \description{
-Sends a signal to a hearbeat process that is using key \code{key}
+Sends a signal to a heartbeat process that is using key \code{key}
+}
+\examples{
+if (redux::redis_available()) {
+  rand_str <- function() {
+    paste(sample(letters, 20, TRUE), collapse = "")
+  }
+  # Suppose we have a process that exposes a heartbeat running on
+  # this key:
+  key <- sprintf("heartbeatr:test:\%s", rand_str())
+
+  # We can send it an interrupt over redis using:
+  con <- redux::hiredis()
+  heartbeatr::heartbeat_send_signal(con, key, tools::SIGINT)
+}
 }

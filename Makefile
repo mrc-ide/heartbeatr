@@ -8,7 +8,7 @@ test:
 	${RSCRIPT} -e 'library(methods); devtools::test()'
 
 test_all:
-	REMAKE_TEST_INSTALL_PACKAGES=true make test
+	HEARTBEAT_ISOLATED_REDIS=true make test
 
 roxygen:
 	@mkdir -p man
@@ -32,8 +32,15 @@ check_all:
 	${RSCRIPT} -e "rcmdcheck::rcmdcheck(args = c('--as-cran', '--no-manual'))"
 
 clean:
-	rm -f src/*.o src/*.so
+	rm -f src/*.o src/*.so src/*.gcda src/*.gcno src/*.gcov
 	rm -rf src/heartbeatr.so.dSYM
 	./cleanup
+
+pkgdown:
+	${RSCRIPT} -e "library(methods); pkgdown::build_site()"
+	rm -f README.html
+
+website: pkgdown
+	./scripts/update_web.sh
 
 .PHONY: clean all test document install

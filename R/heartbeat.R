@@ -1,7 +1,9 @@
 ##' @importFrom R6 R6Class
 ##' @useDynLib heartbeatr, .registration = TRUE
-R6_heartbeat <- R6::R6Class(
+heartbeat_ <- R6::R6Class(
   "heartbeat",
+
+  cloneable = FALSE,
 
   public = list(
     initialize = function(config, key, value, period, expire) {
@@ -101,26 +103,24 @@ R6_heartbeat <- R6::R6Class(
     value = NULL
   ))
 
+
 ##' Create a heartbeat instance.  This can be used by running
-##' \code{obj$start()} which will reset the TTL on \code{key} every
-##' \code{period} seconds (don't set this too high).  If the R process
-##' dies, then the key will expire after \code{3 * period} seconds (or
-##' set \code{expire}) and another application can tell that this R
+##' `obj$start()` which will reset the TTL (Time To Live) on `key` every
+##' `period` seconds (don't set this too high).  If the R process
+##' dies, then the key will expire after `3 * period` seconds (or
+##' set `expire`) and another application can tell that this R
 ##' instance has died.
 ##'
 ##' The heartbeat object has three methods:
-##' \itemize{
 ##'
-##' \item \code{is_running()} which returns \code{TRUE} or
-##' \code{FALSE} if the heartbeat is/is not running.
+##' * `is_running()` which returns `TRUE` or
+##'   `FALSE` if the heartbeat is/is not running.
 ##'
-##' \item \code{start()} which starts a heartbeat
+##' * `start()` which starts a heartbeat
 ##'
-##' \item \code{stop()} which requess a stops for the heartbeat
+##' * `stop()` which requests a stop for the heartbeat
 ##'
-##' }
-##'
-##' Heavily inspired by the \code{doRedis} package.
+##' Heavily inspired by the `doRedis` package.
 ##' @title Create a heartbeat instance
 ##' @param key Key to use
 ##' @param period Timeout period (in seconds)
@@ -128,10 +128,10 @@ R6_heartbeat <- R6::R6Class(
 ##' @param value Value to store in the key.  By default it stores the
 ##'   expiry time, so the time since last heartbeat can be computed.
 ##' @param config Configuration parameters passed through to
-##'   \code{redux::redis_config}.  Provide as either a named list or a
-##'   \code{redis_config} object.  This allows host, port, password,
+##'   `redux::redis_config`.  Provide as either a named list or a
+##'   `redis_config` object.  This allows host, port, password,
 ##'   db, etc all to be set.  Socket connections (i.e., using
-##'   \code{path} to access Redis over a socket) are not currently
+##'   `path` to access Redis over a socket) are not currently
 ##'   supported.
 ##' @param start Should the heartbeat be started immediately?
 ##' @param timeout Time, in seconds, to wait for the heartbeat to
@@ -139,26 +139,65 @@ R6_heartbeat <- R6::R6Class(
 ##'   second unless your connection is very slow) so this can be
 ##'   generally left alone.
 ##' @export
+##' @examples
+##'
+##' if (redux::redis_available()) {
+##'   rand_str <- function() {
+##'     paste(sample(letters, 20, TRUE), collapse = "")
+##'   }
+##'   key <- sprintf("heartbeatr:test:%s", rand_str())
+##'   h <- heartbeatr::heartbeat(key, 1, expire = 2)
+##'   con <- redux::hiredis()
+##'
+##'   # The heartbeat key exists
+##'   con$EXISTS(key)
+##'
+##'   # And has an expiry of less than 2000ms
+##'   con$PTTL(key)
+##'
+##'   # We can manually stop the heartbeat, and 2s later the key will
+##'   # stop existing
+##'   h$stop()
+##'
+##'   # Sys.sleep(2)
+##'   # con$EXISTS(key) # 0
+##' }
 heartbeat <- function(key, period, expire = 3 * period, value = expire,
                       config = NULL, start = TRUE, timeout = 10) {
-  ret <- R6_heartbeat$new(config, key, as.character(value), period, expire)
+  ret <- heartbeat_$new(config, key, as.character(value), period, expire)
   if (start) {
     ret$start(timeout)
   }
   ret
 }
 
-##' Sends a signal to a hearbeat process that is using key \code{key}
+
+##' Sends a signal to a heartbeat process that is using key `key`
 ##' @title Send a signal
 ##' @param key The heartbeat key
-##' @param signal A signal to send (e.g. \code{tools::SIGINT} or
-##'   \code{tools::SIGKILL})
+##' @param signal A signal to send (e.g. `tools::SIGINT` or
+##'   `tools::SIGKILL`)
 ##' @param con A hiredis object
 ##' @export
+##' @examples
+##' if (redux::redis_available()) {
+##'   rand_str <- function() {
+##'     paste(sample(letters, 20, TRUE), collapse = "")
+##'   }
+##'   # Suppose we have a process that exposes a heartbeat running on
+##'   # this key:
+##'   key <- sprintf("heartbeatr:test:%s", rand_str())
+##'
+##'   # We can send it an interrupt over redis using:
+##'   con <- redux::hiredis()
+##'   heartbeatr::heartbeat_send_signal(con, key, tools::SIGINT)
+##' }
 heartbeat_send_signal <- function(con, key, signal) {
   assert_scalar_character(key)
   con$RPUSH(heartbeat_key_signal(key), signal)
+  invisible()
 }
+
 
 heartbeat_key_signal <- function(key) {
   paste0(key, ":signal")

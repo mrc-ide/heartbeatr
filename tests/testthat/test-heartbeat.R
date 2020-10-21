@@ -142,9 +142,9 @@ test_that("dying process", {
   port <- con$config()$port
 
   key <- "heartbeat_key:die"
-  Rscript <- file.path(R.home("bin"), "Rscript")
+  rscript <- file.path(R.home("bin"), "Rscript")
   args <- c("run-heartbeat.R", host, port, key, 1, expire, 600)
-  px <- processx::process$new(Rscript, args)
+  px <- processx::process$new(rscript, args)
 
   timeout <- 2
   dt <- 0.01
@@ -265,7 +265,4 @@ test_that("disallow socket connection", {
                          config = list(path = tempdir()),
                          start = FALSE),
                "Only tcp redis connections are supported")
-})
-
-test_that("ungraceful exit", {
 })
