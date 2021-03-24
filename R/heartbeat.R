@@ -1,11 +1,12 @@
 ##' @importFrom R6 R6Class
-##' @useDynLib heartbeatr, .registration = TRUE
 heartbeat_ <- R6::R6Class(
   "heartbeat",
 
   cloneable = FALSE,
 
   public = list(
+    ## TODO: A better value would be the pid? though we could save a
+    ## bunch of stuff of course.
     initialize = function(config, key, value, period, expire) {
       assert_scalar_character(key)
       assert_scalar_character(value)
@@ -40,16 +41,10 @@ heartbeat_ <- R6::R6Class(
     ## keep_going bit so we don't have to lock when dealing with the
     ## BLPOP (which could be fairly slow).
     is_running = function() {
-      if (is.null(private$ptr)) {
+      if (is.null(private$process)) {
         FALSE
       } else {
-        ## I don't know that this is sensible or not; if this returns
-        ## FALSE then it does not mean that the heartbeat is
-        ## *absolutely* running because it could have died in the
-        ## meantime and we don't check here for the key.  So this
-        ## probably needs expanding but it requires a better knowledge
-        ## of the real-life failure modes.
-        .Call(heartbeat_running, private$ptr)
+        private$process$is_alive()
       }
     },
 
@@ -58,26 +53,37 @@ heartbeat_ <- R6::R6Class(
         stop("Already running on key ", private$key)
       }
       assert_scalar_numeric(timeout)
-      private$ptr <- .Call(heartbeat_create,
-                           private$config$host,
-                           as.integer(private$config$port),
-                           private$config$password %||% "",
-                           as.integer(private$config$db %||% 0L),
-                           private$key, private$value, private$key_signal,
-                           private$expire, private$period, timeout)
+      private$process <- heartbeat_process(
+        private$config, private$key, private$value,
+        private$period, private$expire)
+
+      con <- redux::hiredis(private$config)
+      wait_timeout("Did not create heartbeat in time", timeout, function() {
+        if (!private$process$is_alive()) {
+          stop("Process has died")
+        }
+        con$EXISTS(private$key) == 0
+      })
+
       invisible(self)
     },
 
     stop = function(wait = TRUE, timeout = 10) {
       assert_scalar_logical(wait)
-      assert_scalar_numeric(timeout)
-      if (timeout < 0) {
-        stop("timeout must be positive")
+      assert_valid_timeout(timeout)
+
+      con <- redux::hiredis(private$config)
+      con$RPUSH(private$key_signal, 0)
+
+      process <- private$process
+      private$process <- NULL
+
+      if (wait) {
+        wait_timeout("Did not stop in time", timeout, function()
+          process$is_alive())
       }
-      ret <- .Call(heartbeat_stop, private$ptr, FALSE, wait,
-                   as.numeric(timeout))
-      private$ptr <- NULL
-      ret
+
+      TRUE
     },
 
     print = function(...) {
@@ -95,12 +101,16 @@ heartbeat_ <- R6::R6Class(
 
   private = list(
     config = NULL,
-    ptr = NULL,
+    process = NULL,
     key = NULL,
     key_signal = NULL,
     period = NULL,
     expire = NULL,
-    value = NULL
+    value = NULL,
+
+    finalize = function() {
+      try(self$stop(FALSE), silent = TRUE)
+    }
   ))
 
 
@@ -120,24 +130,31 @@ heartbeat_ <- R6::R6Class(
 ##'
 ##' * `stop()` which requests a stop for the heartbeat
 ##'
-##' Heavily inspired by the `doRedis` package.
 ##' @title Create a heartbeat instance
+##'
 ##' @param key Key to use
+##'
 ##' @param period Timeout period (in seconds)
+##'
 ##' @param expire Key expiry time (in seconds)
+##'
 ##' @param value Value to store in the key.  By default it stores the
 ##'   expiry time, so the time since last heartbeat can be computed.
+##'
 ##' @param config Configuration parameters passed through to
 ##'   `redux::redis_config`.  Provide as either a named list or a
 ##'   `redis_config` object.  This allows host, port, password,
 ##'   db, etc all to be set.  Socket connections (i.e., using
 ##'   `path` to access Redis over a socket) are not currently
 ##'   supported.
+##'
 ##' @param start Should the heartbeat be started immediately?
+##'
 ##' @param timeout Time, in seconds, to wait for the heartbeat to
 ##'   appear.  It should generally appear very quickly (within a
 ##'   second unless your connection is very slow) so this can be
 ##'   generally left alone.
+##'
 ##' @export
 ##' @examples
 ##'
@@ -201,4 +218,34 @@ heartbeat_send_signal <- function(con, key, signal) {
 
 heartbeat_key_signal <- function(key) {
   paste0(key, ":signal")
+}
+
+
+
+heartbeat_process <- function(config, key, value, period, expire) {
+  args <- list(config = config, key = key, value = value,
+               period = period, expire = expire)
+  callr::r_bg(function(...) heartbeat_worker(...),
+              args = args, package = TRUE, stdout = FALSE, stderr = FALSE,
+              supervise = TRUE)
+}
+
+
+
+heartbeat_worker <- function(config, key, value, period, expire) {
+  con <- redux::hiredis(config)
+  con$SET(key, value)
+  on.exit(con$DEL(key))
+  key_signal <- heartbeat_key_signal(key)
+  con$DEL(key_signal)
+
+  repeat {
+    con$EXPIRE(key, expire)
+    ans <- con$BLPOP(key_signal, period)
+    if (!is.null(ans)) {
+      ## We might here send an interrupt to the main progam, but I
+      ## think that currently behaves poorly
+      break
+    }
+  }
 }

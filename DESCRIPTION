@@ -18,6 +18,7 @@ BugReports: https://github.com/mrc-ide/heartbeatr/issues
 SystemRequirements: C++11, libhiredis, redis-server
 Imports:
     R6,
+    callr,
     redux (>= 1.0.0)
 Suggests:
     processx,

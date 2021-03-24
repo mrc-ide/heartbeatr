@@ -3,7 +3,7 @@ context("heartbeat")
 test_that("basic", {
   skip_if_no_redis()
   config <- redux::redis_config()
-  key <- "heartbeat_key:basic"
+  key <- sprintf("heartbeat_key:basic:%s", rand_str())
   period <- 1
   expire <- 2
   obj <- heartbeat(key, period, expire = expire, start = FALSE)
@@ -16,6 +16,8 @@ test_that("basic", {
   expect_false(obj$is_running())
 
   obj$start()
+  wait_timeout("Key not available in time", 5, function() con$EXISTS(key) == 0)
+
   expect_equal(con$EXISTS(key), 1)
   expect_equal(con$GET(key), as.character(expire))
   ttl <- con$TTL(key)
@@ -32,9 +34,11 @@ test_that("basic", {
   expect_equal(con$EXISTS(key), 0)
 })
 
+
+## This *should* trigger faster IMO
 test_that("Garbage collection", {
   skip_if_no_redis()
-  key <- "heartbeat_key:gc"
+  key <- sprintf("heartbeat_key:gc%s", rand_str())
   period <- 1
   expire <- 2
   con <- redux::hiredis()
@@ -45,14 +49,18 @@ test_that("Garbage collection", {
 
   rm(obj)
   gc()
-  Sys.sleep(0.5)
+
+  wait_timeout("Key not expired in time", expire, function()
+    con$EXISTS(key) == 1)
   expect_equal(con$EXISTS(key), 0)
 })
 
+
 test_that("Send signals", {
+  skip("rewrite - may not be possible")
   skip_if_no_redis()
   skip_on_os("windows")
-  key <- "heartbeat_key:signals"
+  key <- sprinf("heartbeat_key:signals:%s", rand_str())
   period <- 10
   expire <- 20
   con <- redux::hiredis()
@@ -83,53 +91,6 @@ test_that("Send signals", {
   obj$stop()
 })
 
-test_that("auth", {
-  skip_if_not_isolated_redis()
-  con <- redux::hiredis()
-
-  key <- "heartbeat_key:auth"
-  password <- "password"
-
-  con$CONFIG_SET("requirepass", password)
-  con$AUTH(password)
-  on.exit(con$CONFIG_SET("requirepass", ""))
-
-  expect_error(redux::hiredis()$PING(), "NOAUTH")
-
-  period <- 1
-  expire <- 2
-  obj <- heartbeat(key, period, expire = expire,
-                   config = list(password = password))
-  expect_is(obj, "heartbeat")
-  expect_is(obj, "R6")
-  expect_true(obj$is_running())
-  expect_equal(con$EXISTS(key), 1)
-  expect_true(obj$stop())
-  expect_false(obj$is_running())
-  expect_equal(con$EXISTS(key), 0)
-})
-
-test_that("db", {
-  skip_if_no_redis()
-  con <- redux::hiredis()
-
-  key <- "heartbeat_key:db"
-  db <- 3L
-
-  con$SELECT(db)
-
-  period <- 1
-  expire <- 2
-  obj <- heartbeat(key, period, expire = expire, config = list(db = db))
-
-  expect_is(obj, "heartbeat")
-  expect_is(obj, "R6")
-  expect_true(obj$is_running())
-  expect_equal(con$EXISTS(key), 1)
-  expect_true(obj$stop())
-  expect_false(obj$is_running())
-  expect_equal(con$EXISTS(key), 0)
-})
 
 test_that("dying process", {
   skip_if_no_redis()
@@ -141,97 +102,26 @@ test_that("dying process", {
   host <- con$config()$host
   port <- con$config()$port
 
-  key <- "heartbeat_key:die"
+  key <- sprintf("heartbeat_key:die:%s", rand_str())
   rscript <- file.path(R.home("bin"), "Rscript")
   args <- c("run-heartbeat.R", host, port, key, 1, expire, 600)
   px <- processx::process$new(rscript, args)
 
-  timeout <- 2
-  dt <- 0.01
-  for (i in seq_len(timeout / dt)) {
-    if (con$EXISTS(key) == 1) {
-      break
-    }
-    if (!px$is_alive()) {
-      break
-    }
-    Sys.sleep(dt)
-  }
+  wait_timeout("Process did not start up in time", 5, function()
+    con$EXISTS(key) == 0 && px$is_alive(), poll = 0.2)
 
+  ## This is not taking out our worker properly:
   expect_equal(con$EXISTS(key), 1)
   px$kill(0)
-  Sys.sleep(0.5)
+  wait_timeout("Process did not die in time", 5, px$is_alive)
   expect_equal(con$EXISTS(key), 1)
-  expect_false(px$is_alive())
   Sys.sleep(expire)
   expect_equal(con$EXISTS(key), 0)
 })
 
-test_that("pointer handling", {
-  skip_if_no_redis()
-  key <- "heartbeat_key:basic"
-  period <- 1
-  expire <- 2
-  obj <- heartbeat(key, period, expire = expire, start = TRUE)
-
-  private <- environment(obj$initialize)$private
-  ptr <- private$ptr
-  null_ptr <- unserialize(serialize(ptr, NULL))
-
-  obj$stop()
-
-  expect_error(.Call(heartbeat_stop, NULL, TRUE, FALSE, 1),
-               "Expected an external pointer")
-  expect_error(.Call(heartbeat_stop, null_ptr, TRUE, FALSE, 1),
-               "already freed")
-})
-
-test_that("connnection failure", {
-  skip_if_no_redis()
-  key <- "heartbeat_key:confail"
-  period <- 1
-  expire <- 2
-
-  con <- redux::hiredis()
-
-  expect_error(
-    heartbeat(key, period, expire = expire,
-              config = list(port = 9999), start = TRUE),
-    "Failed to create heartbeat: redis connection failed")
-  expect_equal(con$EXISTS(key), 0)
-
-  expect_error(
-    heartbeat(key, period, expire = expire,
-              config = list(password = "yo"), start = TRUE),
-    "Failed to create heatbeat: authentication refused")
-  expect_equal(con$EXISTS(key), 0)
-
-  expect_error(
-    heartbeat(key, period, expire = expire,
-              config = list(db = 99), start = TRUE),
-    "Failed to create heatbeat: could not SELECT db")
-  expect_equal(con$EXISTS(key), 0)
-
-  expect_error(
-    heartbeat(key, period, timeout = 0),
-    "Failed to create heartbeat: did not come up in time")
-  Sys.sleep(0.25)
-  expect_equal(con$EXISTS(key), 0)
-
-  skip_if_not_isolated_redis()
-  password <- "yolo"
-  con$CONFIG_SET("requirepass", password)
-  con$AUTH(password)
-  on.exit(con$CONFIG_SET("requirepass", ""))
-  expect_error(
-    heartbeat(key, period, expire = expire, start = TRUE),
-    "Failed to create heatbeat: could not SET (password required?)",
-    fixed = TRUE)
-  expect_equal(con$EXISTS(key), 0)
-})
 
 test_that("invalid times", {
-  key <- "heartbeat_key:confail"
+  key <- sprintf("heartbeat_key:confail:%s", rand_str())
   period <- 10
   expect_error(heartbeat(key, period, expire = period),
                "expire must be longer than period")
@@ -239,30 +129,24 @@ test_that("invalid times", {
                "expire must be longer than period")
 })
 
+
 test_that("positive timeout", {
   skip_if_no_redis()
-  key <- "heartbeat_key:basic"
+  key <- sprintf("heartbeat_key:basic:%s", rand_str())
   period <- 1
   obj <- heartbeat(key, period, start = FALSE)
-  expect_error(obj$stop(wait = TRUE, timeout = -1), "timeout must be positive")
+  expect_error(obj$stop(wait = TRUE, timeout = -1),
+               "'timeout' must be positive")
 })
+
 
 test_that("print", {
   skip_if_no_redis()
-  key <- "heartbeat_key:print"
+  key <- sprintf("heartbeat_key:print:%s", rand_str())
   period <- 1
   obj <- heartbeat(key, period, start = FALSE)
   str <- capture.output(tmp <- print(obj))
   expect_identical(tmp, obj)
   expect_match(str, "<heartbeat>", fixed = TRUE, all = FALSE)
   expect_match(str, "running: false", fixed = TRUE, all = FALSE)
-})
-
-test_that("disallow socket connection", {
-  key <- "heartbeat_key:socket"
-  period <- 1
-  expect_error(heartbeat(key, period,
-                         config = list(path = tempdir()),
-                         start = FALSE),
-               "Only tcp redis connections are supported")
 })
