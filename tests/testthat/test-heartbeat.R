@@ -98,19 +98,16 @@ test_that("Send signals", {
 
 test_that("dying process", {
   skip_if_no_redis()
-  skip_if_not_installed("processx")
-  Sys.setenv(R_TESTS = "")
-
-  con <- redux::hiredis()
-  expire <- 2
-  host <- con$config()$host
-  port <- con$config()$port
 
   key <- sprintf("heartbeat_key:die:%s", rand_str())
-  rscript <- file.path(R.home("bin"), "Rscript")
-  args <- c("run-heartbeat.R", host, port, key, 1, expire, 600)
-  px <- processx::process$new(rscript, args)
 
+  px <- callr::r_bg(function(key) {
+    config <- redux::redis_config()
+    obj <- heartbeatr::heartbeat(key, 1, 2, config = config)
+    Sys.sleep(120)
+  }, list(key = key))
+
+  con <- redux::hiredis()
   wait_timeout("Process did not start up in time", 5, function()
     con$EXISTS(key) == 0 && px$is_alive(), poll = 0.2)
 
@@ -119,7 +116,7 @@ test_that("dying process", {
   px$kill(0)
   wait_timeout("Process did not die in time", 5, px$is_alive)
   expect_equal(con$EXISTS(key), 1)
-  Sys.sleep(expire)
+  Sys.sleep(2) # expire
   expect_equal(con$EXISTS(key), 0)
 })
 
