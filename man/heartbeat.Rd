@@ -76,8 +76,12 @@ if (redux::redis_available()) {
   # stop existing
   h$stop()
 
-  # Sys.sleep(2)
-  # con$EXISTS(key) # 0
+  Sys.sleep(2)
+  con$EXISTS(key) # 0
+
+  # This is required to close any processes opened by this
+  # example, normally you would not need this.
+  processx:::supervisor_kill()
 }
 }
 \section{Methods}{

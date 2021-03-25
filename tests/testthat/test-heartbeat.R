@@ -152,7 +152,7 @@ test_that("dying process", {
 
   ## This is not taking out our worker properly:
   expect_equal(con$EXISTS(key), 1)
-  px$kill(0)
+  px$kill(0.5)
   wait_timeout("Process did not die in time", 5, px$is_alive)
   expect_equal(con$EXISTS(key), 1)
   Sys.sleep(2) # expire

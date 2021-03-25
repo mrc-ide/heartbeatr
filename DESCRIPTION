@@ -22,6 +22,7 @@ Imports:
     redux (>= 1.0.0)
 Suggests:
     mockery,
+    processx,
     testthat
 RoxygenNote: 7.1.1
 Roxygen: list(markdown = TRUE)

@@ -36,6 +36,7 @@ heartbeat_ <- R6::R6Class(
       assert_scalar_character(value)
       assert_scalar_positive_integer(expire)
       assert_scalar_positive_integer(period)
+      assert_scalar_logical(start)
       assert_valid_timeout(timeout)
 
       if (expire <= period) {
@@ -202,8 +203,12 @@ heartbeat_ <- R6::R6Class(
 ##'   # stop existing
 ##'   h$stop()
 ##'
-##'   # Sys.sleep(2)
-##'   # con$EXISTS(key) # 0
+##'   Sys.sleep(2)
+##'   con$EXISTS(key) # 0
+##'
+##'   # This is required to close any processes opened by this
+##'   # example, normally you would not need this.
+##'   processx:::supervisor_kill()
 ##' }
 heartbeat <- function(key, period, expire = 3 * period, value = expire,
                       config = NULL, start = TRUE, timeout = 10) {
