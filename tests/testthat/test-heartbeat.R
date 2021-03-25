@@ -1,9 +1,5 @@
 context("heartbeat")
 
-## * See about signals
-## * Obvious coverage holes
-## * Fix the interface to go nicely into rrq
-
 test_that("basic", {
   skip_if_no_redis()
   config <- redux::redis_config()

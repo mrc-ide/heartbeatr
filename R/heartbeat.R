@@ -148,15 +148,6 @@ heartbeat_ <- R6::R6Class(
 ##' set `expire`) and another application can tell that this R
 ##' instance has died.
 ##'
-##' The heartbeat object has three methods:
-##'
-##' * `is_running()` which returns `TRUE` or
-##'   `FALSE` if the heartbeat is/is not running.
-##'
-##' * `start()` which starts a heartbeat
-##'
-##' * `stop()` which requests a stop for the heartbeat
-##'
 ##' @title Create a heartbeat instance
 ##'
 ##' @param key Key to use
