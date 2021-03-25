@@ -225,9 +225,14 @@ heartbeat_key_signal <- function(key) {
 heartbeat_process <- function(config, key, value, period, expire) {
   args <- list(config = config, key = key, value = value,
                period = period, expire = expire)
+  ## We specify a logfile here because the process must write
+  ## somewhere. However, callr doesn't seem to always report
+  ## information nicely, and there's not actually a lot log
+  ## logging. But the file will be created so needs to go in tempdir.
+  logfile <- tempfile("heartbeat_")
   callr::r_bg(function(...) heartbeat_worker(...),
-              args = args, package = TRUE, stdout = FALSE, stderr = FALSE,
-              supervise = TRUE)
+              args = args, package = TRUE, supervise = TRUE,
+              stdout = logfile, stderr = logfile)
 }
 
 
