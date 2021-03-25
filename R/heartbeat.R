@@ -118,11 +118,11 @@ heartbeat_ <- R6::R6Class(
     ##' @param ... Additional arguments, currently ignored
     format = function(...) {
       c("<heartbeat>\n",
-        sprintf("  - running: %s\n", tolower(self$is_running())),
-        sprintf("  - key: %s\n", private$key),
-        sprintf("  - period: %d\n", private$period),
-        sprintf("  - expire: %d\n", private$expire),
-        sprintf("  - redis:\n%s\n",
+        sprintf("  - running: %s", tolower(self$is_running())),
+        sprintf("  - key: %s", private$key),
+        sprintf("  - period: %d", private$period),
+        sprintf("  - expire: %d", private$expire),
+        sprintf("  - redis:\n%s",
                 paste0("      ", capture.output(print(private$config))[-1],
                        collapse = "\n")))
     }
