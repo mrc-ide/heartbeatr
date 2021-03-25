@@ -106,11 +106,7 @@ heartbeat_ <- R6::R6Class(
     key_signal = NULL,
     period = NULL,
     expire = NULL,
-    value = NULL,
-
-    finalize = function() {
-      try(self$stop(FALSE), silent = TRUE)
-    }
+    value = NULL
   ))
 
 

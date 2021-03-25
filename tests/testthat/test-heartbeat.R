@@ -35,7 +35,6 @@ test_that("basic", {
 })
 
 
-## This *should* trigger faster IMO
 test_that("Garbage collection", {
   skip_if_no_redis()
   key <- sprintf("heartbeat_key:gc%s", rand_str())
@@ -43,13 +42,18 @@ test_that("Garbage collection", {
   expire <- 2
   con <- redux::hiredis()
 
-  obj <- heartbeat(key, period, expire = expire)
+  path <- "tmp.log"
+
+  obj <- heartbeat(key, period, expire = expire, logfile = path)
   expect_equal(con$EXISTS(key), 1)
   expect_true(obj$is_running())
 
   rm(obj)
   gc()
 
+  ## We might have to wait up to 'expire' seconds for this key to
+  ## disappear. We could add an attempt to clean up into the finaliser
+  ## but that will cause stalls on garbage collection, which is rude.
   wait_timeout("Key not expired in time", expire, function()
     con$EXISTS(key) == 1)
   expect_equal(con$EXISTS(key), 0)
