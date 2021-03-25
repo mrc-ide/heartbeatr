@@ -82,7 +82,7 @@ heartbeat_ <- R6::R6Class(
       con <- redux::hiredis(private$config)
       wait_timeout("Did not start in time", private$timeout, function() {
         if (!private$process$is_alive()) {
-          stop("Process has died")
+          private$process$get_result()
         }
         con$EXISTS(private$key) == 0
       })
@@ -248,14 +248,8 @@ heartbeat_key_signal <- function(key) {
 heartbeat_process <- function(config, key, value, period, expire) {
   args <- list(config = config, key = key, value = value,
                period = period, expire = expire, parent = Sys.getpid())
-  ## We specify a logfile here because the process must write
-  ## somewhere. However, callr doesn't seem to always report
-  ## information nicely, and there's not actually a lot log
-  ## logging. But the file will be created so needs to go in tempdir.
-  logfile <- tempfile("heartbeat_")
   callr::r_bg(function(...) heartbeat_worker(...),
-              args = args, package = TRUE, supervise = TRUE,
-              stdout = logfile, stderr = logfile)
+              args = args, package = TRUE, supervise = TRUE)
 }
 
 

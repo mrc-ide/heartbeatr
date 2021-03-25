@@ -193,6 +193,10 @@ test_that("handle startup failure", {
   ## Then we'll break the config:
   private <- environment(obj$initialize)$private
   private$value <- NULL
-  expect_error(obj$start(),
-               "Process has died")
+
+  ## This error comes from redux
+  expect_error(obj$start(), "value must be a scalar")
+
+  expect_false(obj$is_running())
+  expect_equal(redux::hiredis()$EXISTS(key), 0)
 })
