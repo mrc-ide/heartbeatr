@@ -44,7 +44,7 @@ test_that("Garbage collection", {
 
   path <- "tmp.log"
 
-  obj <- heartbeat(key, period, expire = expire, logfile = path)
+  obj <- heartbeat(key, period, expire = expire)
   expect_equal(con$EXISTS(key), 1)
   expect_true(obj$is_running())
 
@@ -60,39 +60,68 @@ test_that("Garbage collection", {
 })
 
 
-test_that("Send signals", {
-  skip("rewrite - may not be possible")
+test_that("Kill process", {
+  skip_if_no_redis()
+
+  key <- sprintf("heartbeat_key:kill:%s", rand_str())
+
+  px <- callr::r_bg(function(key) {
+    config <- redux::redis_config()
+    obj <- heartbeatr::heartbeat(key, 1, 2, config = config)
+    Sys.sleep(120)
+  }, list(key = key))
+  pid <- px$get_pid()
+
+  con <- redux::hiredis()
+  wait_timeout("Process did not start up in time", 5, function()
+    con$EXISTS(key) == 0 && px$is_alive(), poll = 0.2)
+
+  heartbeat_send_signal(con, key, tools::SIGTERM)
+
+  wait_timeout("Process did stop in time", 5, function()
+    px$is_alive(), poll = 0.2)
+  expect_false(px$is_alive())
+  expect_equal(con$EXISTS(key), 0)
+})
+
+
+test_that("Interrupt process", {
   skip_if_no_redis()
   skip_on_os("windows")
-  key <- sprinf("heartbeat_key:signals:%s", rand_str())
-  period <- 10
-  expire <- 20
+
+  key <- sprintf("heartbeat_key:interrupt:%s", rand_str())
+  path <- tempfile()
+
+  px <- callr::r_bg(function(key, path) {
+    config <- redux::redis_config()
+    obj <- heartbeatr::heartbeat(key, 1, 2, config = config)
+    writeLines("1", path)
+    tryCatch(
+      Sys.sleep(120),
+      interrupt = function(e) NULL)
+    writeLines("2", path)
+    Sys.sleep(120)
+  }, list(key = key, path = path))
+
   con <- redux::hiredis()
-  on.exit(con$DEL(key))
+  wait_timeout("Process did not start up in time", 5, function()
+    con$EXISTS(key) == 0 && px$is_alive(), poll = 0.2)
 
-  obj <- heartbeat(key, period, expire = expire, start = TRUE)
   expect_equal(con$EXISTS(key), 1)
-  expect_true(obj$is_running())
+  expect_true(px$is_alive())
 
-  idx <- 0
-  dt <- 0.1
-  f <- function() {
-    for (i in 1:(expire * dt)) {
-      idx <<- i
-      if (i > 1) {
-        heartbeat_send_signal(con, key, tools::SIGINT)
-      }
-      Sys.sleep(dt)
-    }
-    i
-  }
+  wait_timeout("File did not update in time", 5, function()
+    !file.exists(path), poll = 0.1)
+  expect_equal(readLines(path), "1")
 
-  ans <- tryCatch(f(), interrupt = function(e) TRUE)
-  expect_true(ans)
-  expect_gte(idx, 1)
-  expect_lt(idx, 10)
-  expect_true(obj$is_running())
-  obj$stop()
+  heartbeat_send_signal(con, key, tools::SIGINT)
+
+  wait_timeout("File did not update in time", 5, function()
+    readLines(path) == "1" && px$is_alive(), poll = 0.1)
+
+  expect_equal(readLines(path), "2")
+  expect_true(px$is_alive())
+  px$kill()
 })
 
 
@@ -110,6 +139,9 @@ test_that("dying process", {
   con <- redux::hiredis()
   wait_timeout("Process did not start up in time", 5, function()
     con$EXISTS(key) == 0 && px$is_alive(), poll = 0.2)
+
+  expect_equal(con$EXISTS(key), 1)
+  expect_true(px$is_alive())
 
   ## This is not taking out our worker properly:
   expect_equal(con$EXISTS(key), 1)

@@ -220,7 +220,7 @@ heartbeat_key_signal <- function(key) {
 
 heartbeat_process <- function(config, key, value, period, expire) {
   args <- list(config = config, key = key, value = value,
-               period = period, expire = expire)
+               period = period, expire = expire, parent = Sys.getpid())
   ## We specify a logfile here because the process must write
   ## somewhere. However, callr doesn't seem to always report
   ## information nicely, and there's not actually a lot log
@@ -233,7 +233,7 @@ heartbeat_process <- function(config, key, value, period, expire) {
 
 
 
-heartbeat_worker <- function(config, key, value, period, expire) {
+heartbeat_worker <- function(config, key, value, period, expire, parent) {
   con <- redux::hiredis(config)
   con$SET(key, value)
   on.exit(con$DEL(key))
@@ -244,8 +244,13 @@ heartbeat_worker <- function(config, key, value, period, expire) {
     con$EXPIRE(key, expire)
     ans <- con$BLPOP(key_signal, period)
     if (!is.null(ans)) {
-      ## We might here send an interrupt to the main progam, but I
-      ## think that currently behaves poorly
+      value <- ans[[2L]]
+      if (value %in% c(tools::SIGKILL, tools::SIGTERM)) {
+        con$DEL(c(key, key_signal))
+        tools::pskill(parent, value)
+      } else if (value == tools::SIGINT) {
+        tools::pskill(parent, value)
+      }
       break
     }
   }
