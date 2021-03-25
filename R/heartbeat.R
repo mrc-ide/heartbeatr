@@ -1,26 +1,47 @@
 ##' @importFrom R6 R6Class
+##' @rdname heartbeat
 heartbeat_ <- R6::R6Class(
   "heartbeat",
 
   cloneable = FALSE,
 
   public = list(
-    ## TODO: A better value would be the pid? though we could save a
-    ## bunch of stuff of course.
-    initialize = function(config, key, value, period, expire) {
+    ##' @description Create a heartbeat object
+    ##'
+    ##' @param key Key to use
+    ##'
+    ##' @param period Timeout period (in seconds)
+    ##'
+    ##' @param expire Key expiry time (in seconds)
+    ##'
+    ##' @param value Value to store in the key.  By default it stores the
+    ##'   expiry time, so the time since last heartbeat can be computed.
+    ##'
+    ##' @param config Configuration parameters passed through to
+    ##'   `redux::redis_config`.  Provide as either a named list or a
+    ##'   `redis_config` object.  This allows host, port, password,
+    ##'   db, etc all to be set.  Socket connections (i.e., using
+    ##'   `path` to access Redis over a socket) are not currently
+    ##'   supported.
+    ##'
+    ##' @param start Should the heartbeat be started immediately?
+    ##'
+    ##' @param timeout Time, in seconds, to wait for the heartbeat to
+    ##'   appear.  It should generally appear very quickly (within a
+    ##'   second unless your connection is very slow) so this can be
+    ##'   generally left alone.
+    initialize = function(config, key, value, period, expire, timeout) {
       assert_scalar_character(key)
       assert_scalar_character(value)
       assert_scalar_positive_integer(expire)
       assert_scalar_positive_integer(period)
+      assert_valid_timeout(timeout)
 
       if (expire <= period) {
         stop("expire must be longer than period")
       }
 
       private$config <- redux::redis_config(config = config)
-      if (private$config$scheme != "redis") {
-        stop("Only tcp redis connections are supported")
-      }
 
       private$key <- key
       private$key_signal <- heartbeat_key_signal(key)
@@ -28,18 +49,12 @@ heartbeat_ <- R6::R6Class(
 
       private$period <- as.integer(period)
       private$expire <- as.integer(expire)
+
+      private$timeout <- timeout
     },
 
-    ## There is an issue here with _exactly_ what happens where we
-    ## have a situation where the heartbeat has been scheduled for
-    ## closure but it has not closed.  At some point the other thread
-    ## will clear out the pointer and we want to check that it has
-    ## been set to NULL.  So when doing the check for keep_going we
-    ## need to check that able to read safely.  There's a NULL check
-    ## there in the code but it seems unsafe at this point.  I don't
-    ## think this is super hard to get right and it only impacts the
-    ## keep_going bit so we don't have to lock when dealing with the
-    ## BLPOP (which could be fairly slow).
+    ##' @description Report if heartbeat process is running. This will be
+    ##' `TRUE` if the process has been started and has not stopped.
     is_running = function() {
       if (is.null(private$process)) {
         FALSE
@@ -48,17 +63,19 @@ heartbeat_ <- R6::R6Class(
       }
     },
 
-    start = function(timeout = 10) {
+    ##' @description Start the heartbeat process. An error will be thrown
+    ##' if it is already running.
+    start = function() {
       if (self$is_running()) {
         stop("Already running on key ", private$key)
       }
-      assert_scalar_numeric(timeout)
+
       private$process <- heartbeat_process(
         private$config, private$key, private$value,
         private$period, private$expire)
 
       con <- redux::hiredis(private$config)
-      wait_timeout("Did not create heartbeat in time", timeout, function() {
+      wait_timeout("Did not start in time", private$timeout, function() {
         if (!private$process$is_alive()) {
           stop("Process has died")
         }
@@ -68,9 +85,12 @@ heartbeat_ <- R6::R6Class(
       invisible(self)
     },
 
-    stop = function(wait = TRUE, timeout = 10) {
+    ##' @description Stop the heartbeat process
+    ##' @param wait Logical, indicating if we should wait until the
+    ##' heartbeat process terminates (should take only a fraction of a
+    ##' second)
+    stop = function(wait = TRUE) {
       assert_scalar_logical(wait)
-      assert_valid_timeout(timeout)
 
       con <- redux::hiredis(private$config)
       con$RPUSH(private$key_signal, 0)
@@ -79,23 +99,24 @@ heartbeat_ <- R6::R6Class(
       private$process <- NULL
 
       if (wait) {
-        wait_timeout("Did not stop in time", timeout, function()
+        wait_timeout("Did not stop in time", private$timeout, function()
           process$is_alive())
       }
 
-      TRUE
+      invisible(self)
     },
 
-    print = function(...) {
-      cat("<heartbeat>\n")
-      cat(sprintf("  - running: %s\n", tolower(self$is_running())))
-      cat(sprintf("  - key: %s\n", private$key))
-      cat(sprintf("  - period: %d\n", private$period))
-      cat(sprintf("  - expire: %d\n", private$expire))
-      cat(sprintf("  - redis:\n%s\n",
-                  paste0("      ", capture.output(print(private$config))[-1],
-                         collapse = "\n")))
-      invisible(self)
+    ##' @description Format method, used by R6 to nicely print the object
+    ##' @param ... Additional arguments, currently ignored
+    format = function(...) {
+      c("<heartbeat>\n",
+        sprintf("  - running: %s\n", tolower(self$is_running())),
+        sprintf("  - key: %s\n", private$key),
+        sprintf("  - period: %d\n", private$period),
+        sprintf("  - expire: %d\n", private$expire),
+        sprintf("  - redis:\n%s\n",
+                paste0("      ", capture.output(print(private$config))[-1],
+                       collapse = "\n")))
     }
   ),
 
@@ -106,6 +127,7 @@ heartbeat_ <- R6::R6Class(
     key_signal = NULL,
     period = NULL,
     expire = NULL,
+    timeout = NULL,
     value = NULL
   ))
 
@@ -177,9 +199,10 @@ heartbeat_ <- R6::R6Class(
 ##' }
 heartbeat <- function(key, period, expire = 3 * period, value = expire,
                       config = NULL, start = TRUE, timeout = 10) {
-  ret <- heartbeat_$new(config, key, as.character(value), period, expire)
+  ret <- heartbeat_$new(config, key, as.character(value), period, expire,
+                        timeout)
   if (start) {
-    ret$start(timeout)
+    ret$start()
   }
   ret
 }

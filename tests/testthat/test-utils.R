@@ -22,3 +22,14 @@ test_that("assertions", {
 
   expect_error(assert_integer_like(pi), "is not integer like")
 })
+
+
+test_that("wait timeout errors informatively", {
+  skip_if_not_installed("mockery")
+  callback <- mockery::mock(TRUE, cycle = TRUE)
+  expect_error(
+    wait_timeout("my explanation", 0.1, callback),
+    "Timeout: my explanation")
+  expect_gt(length(mockery::mock_args(callback)), 1)
+  expect_equal(mockery::mock_args(callback)[[1]], list())
+})

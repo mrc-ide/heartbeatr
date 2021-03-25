@@ -183,3 +183,19 @@ test_that("print", {
   expect_match(str, "<heartbeat>", fixed = TRUE, all = FALSE)
   expect_match(str, "running: false", fixed = TRUE, all = FALSE)
 })
+
+
+test_that("handle startup failure", {
+  skip_if_no_redis()
+  config <- redux::redis_config()
+  key <- sprintf("heartbeat_key:basic:%s", rand_str())
+  period <- 1
+  expire <- 2
+  obj <- heartbeat(key, period, expire = expire, start = FALSE)
+
+  ## Then we'll break the config:
+  private <- environment(obj$initialize)$private
+  private$value <- NULL
+  expect_error(obj$start(),
+               "Process has died")
+})

@@ -64,10 +64,6 @@ assert_valid_timeout <- function(x, name = deparse(substitute(x))) {
   }
 }
 
-`%||%` <- function(a, b) { # nolint
-  if (is.null(a)) b else a
-}
-
 
 wait_timeout <- function(explanation, timeout, keep_going,
                          poll = timeout / 100) {

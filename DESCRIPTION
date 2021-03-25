@@ -21,6 +21,7 @@ Imports:
     callr,
     redux (>= 1.0.0)
 Suggests:
+    mockery,
     testthat
 RoxygenNote: 7.1.1
 Roxygen: list(markdown = TRUE)
