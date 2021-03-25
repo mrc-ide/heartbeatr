@@ -1,5 +1,9 @@
 context("heartbeat")
 
+## * See about signals
+## * Obvious coverage holes
+## * Fix the interface to go nicely into rrq
+
 test_that("basic", {
   skip_if_no_redis()
   config <- redux::redis_config()
@@ -15,6 +19,9 @@ test_that("basic", {
   on.exit(con$DEL(key))
   expect_false(obj$is_running())
 
+  expect_error(obj$stop(),
+               "Heartbeat not running on key")
+
   obj$start()
   wait_timeout("Key not available in time", 5, function() con$EXISTS(key) == 0)
 
@@ -29,7 +36,7 @@ test_that("basic", {
   expect_error(obj$start(), "Already running on key")
   expect_true(obj$is_running())
 
-  expect_true(obj$stop())
+  obj$stop()
   expect_false(obj$is_running())
   expect_equal(con$EXISTS(key), 0)
 })
@@ -160,16 +167,6 @@ test_that("invalid times", {
                "expire must be longer than period")
   expect_error(heartbeat(key, period, expire = period - 1),
                "expire must be longer than period")
-})
-
-
-test_that("positive timeout", {
-  skip_if_no_redis()
-  key <- sprintf("heartbeat_key:basic:%s", rand_str())
-  period <- 1
-  obj <- heartbeat(key, period, start = FALSE)
-  expect_error(obj$stop(wait = TRUE, timeout = -1),
-               "'timeout' must be positive")
 })
 
 

@@ -21,6 +21,9 @@ test_that("assertions", {
   expect_silent(assert_scalar_positive_integer(0, TRUE))
 
   expect_error(assert_integer_like(pi), "is not integer like")
+
+  expect_error(assert_valid_timeout(-1), "must be positive")
+  expect_silent(assert_valid_timeout(1))
 })
 
 

@@ -30,7 +30,8 @@ heartbeat_ <- R6::R6Class(
     ##'   appear.  It should generally appear very quickly (within a
     ##'   second unless your connection is very slow) so this can be
     ##'   generally left alone.
-    initialize = function(config, key, value, period, expire, timeout) {
+    initialize = function(config, key, value, period, expire,
+                          start = FALSE, timeout = 10) {
       assert_scalar_character(key)
       assert_scalar_character(value)
       assert_scalar_positive_integer(expire)
@@ -51,6 +52,10 @@ heartbeat_ <- R6::R6Class(
       private$expire <- as.integer(expire)
 
       private$timeout <- timeout
+
+      if (start) {
+        self$start()
+      }
     },
 
     ##' @description Report if heartbeat process is running. This will be
@@ -67,7 +72,7 @@ heartbeat_ <- R6::R6Class(
     ##' if it is already running.
     start = function() {
       if (self$is_running()) {
-        stop("Already running on key ", private$key)
+        stop(sprintf("Already running on key '%s'", private$key))
       }
 
       private$process <- heartbeat_process(
@@ -91,6 +96,9 @@ heartbeat_ <- R6::R6Class(
     ##' second)
     stop = function(wait = TRUE) {
       assert_scalar_logical(wait)
+      if (!self$is_running()) {
+        stop(sprintf("Heartbeat not running on key '%s'", private$key))
+      }
 
       con <- redux::hiredis(private$config)
       con$RPUSH(private$key_signal, 0)
@@ -199,12 +207,8 @@ heartbeat_ <- R6::R6Class(
 ##' }
 heartbeat <- function(key, period, expire = 3 * period, value = expire,
                       config = NULL, start = TRUE, timeout = 10) {
-  ret <- heartbeat_$new(config, key, as.character(value), period, expire,
-                        timeout)
-  if (start) {
-    ret$start()
-  }
-  ret
+  heartbeat_$new(config, key, as.character(value), period, expire,
+                 start, timeout)
 }
 
 

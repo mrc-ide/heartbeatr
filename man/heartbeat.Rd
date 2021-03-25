@@ -96,7 +96,7 @@ if (redux::redis_available()) {
 \subsection{Method \code{new()}}{
 Create a heartbeat object
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{heartbeat_$new(config, key, value, period, expire, timeout)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{heartbeat_$new(config, key, value, period, expire, start = FALSE, timeout = 10)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -118,12 +118,12 @@ expiry time, so the time since last heartbeat can be computed.}
 
 \item{\code{expire}}{Key expiry time (in seconds)}
 
+\item{\code{start}}{Should the heartbeat be started immediately?}
+
 \item{\code{timeout}}{Time, in seconds, to wait for the heartbeat to
 appear.  It should generally appear very quickly (within a
 second unless your connection is very slow) so this can be
 generally left alone.}
-
-\item{\code{start}}{Should the heartbeat be started immediately?}
 }
 \if{html}{\out{</div>}}
 }
