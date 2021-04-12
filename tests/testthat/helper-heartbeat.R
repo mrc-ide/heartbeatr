@@ -13,3 +13,7 @@ skip_if_not_isolated_redis <- function() {
   testthat::skip(
     "Redis is not isolated (set envvar HEARTBEATR_ISOLATED_REDIS to 'true')")
 }
+
+rand_str <- function() {
+  paste(sample(letters, 20, TRUE), collapse = "")
+}
