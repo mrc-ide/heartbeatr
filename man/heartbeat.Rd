@@ -47,15 +47,6 @@ dies, then the key will expire after \code{3 * period} seconds (or
 set \code{expire}) and another application can tell that this R
 instance has died.
 }
-\details{
-The heartbeat object has three methods:
-\itemize{
-\item \code{is_running()} which returns \code{TRUE} or
-\code{FALSE} if the heartbeat is/is not running.
-\item \code{start()} which starts a heartbeat
-\item \code{stop()} which requests a stop for the heartbeat
-}
-}
 \examples{
 
 if (redux::redis_available()) {
