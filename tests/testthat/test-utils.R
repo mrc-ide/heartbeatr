@@ -21,18 +21,4 @@ test_that("assertions", {
   expect_silent(assert_scalar_positive_integer(0, TRUE))
 
   expect_error(assert_integer_like(pi), "is not integer like")
-
-  expect_error(assert_valid_timeout(-1), "must be positive")
-  expect_silent(assert_valid_timeout(1))
-})
-
-
-test_that("wait timeout errors informatively", {
-  skip_if_not_installed("mockery")
-  callback <- mockery::mock(TRUE, cycle = TRUE)
-  expect_error(
-    wait_timeout("my explanation", 0.1, callback),
-    "Timeout: my explanation")
-  expect_gt(length(mockery::mock_args(callback)), 1)
-  expect_equal(mockery::mock_args(callback)[[1]], list())
 })

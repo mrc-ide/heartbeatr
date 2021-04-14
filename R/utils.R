@@ -57,21 +57,6 @@ assert_scalar_character <- function(x, name = deparse(substitute(x))) {
   assert_nonmissing(x, name)
 }
 
-assert_valid_timeout <- function(x, name = deparse(substitute(x))) {
-  assert_scalar_numeric(x, name)
-  if (x < 0) {
-    stop(sprintf("'%s' must be positive", name))
-  }
-}
-
-
-wait_timeout <- function(explanation, timeout, keep_going,
-                         poll = timeout / 100) {
-  t_end <- Sys.time() + timeout
-  while (keep_going()) {
-    if (Sys.time() > t_end) {
-      stop("Timeout: ", explanation)
-    }
-    Sys.sleep(poll)
-  }
+`%||%` <- function(a, b) { # nolint
+  if (is.null(a)) b else a
 }

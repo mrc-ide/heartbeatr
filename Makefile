@@ -34,6 +34,7 @@ check_all:
 clean:
 	rm -f src/*.o src/*.so src/*.gcda src/*.gcno src/*.gcov
 	rm -rf src/heartbeatr.so.dSYM
+	./cleanup
 
 pkgdown:
 	${RSCRIPT} -e "library(methods); pkgdown::build_site()"

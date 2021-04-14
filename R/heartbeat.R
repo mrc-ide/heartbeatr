@@ -1,49 +1,25 @@
 ##' @importFrom R6 R6Class
-##' @rdname heartbeat
+##' @useDynLib heartbeatr, .registration = TRUE
 heartbeat_ <- R6::R6Class(
   "heartbeat",
 
   cloneable = FALSE,
 
   public = list(
-    ##' @description Create a heartbeat object
-    ##'
-    ##' @param key Key to use
-    ##'
-    ##' @param period Timeout period (in seconds)
-    ##'
-    ##' @param expire Key expiry time (in seconds)
-    ##'
-    ##' @param value Value to store in the key.  By default it stores the
-    ##'   expiry time, so the time since last heartbeat can be computed.
-    ##'
-    ##' @param config Configuration parameters passed through to
-    ##'   `redux::redis_config`.  Provide as either a named list or a
-    ##'   `redis_config` object.  This allows host, port, password,
-    ##'   db, etc all to be set.  Socket connections (i.e., using
-    ##'   `path` to access Redis over a socket) are not currently
-    ##'   supported.
-    ##'
-    ##' @param start Should the heartbeat be started immediately?
-    ##'
-    ##' @param timeout Time, in seconds, to wait for the heartbeat to
-    ##'   appear.  It should generally appear very quickly (within a
-    ##'   second unless your connection is very slow) so this can be
-    ##'   generally left alone.
-    initialize = function(config, key, value, period, expire,
-                          start = FALSE, timeout = 10) {
+    initialize = function(config, key, value, period, expire) {
       assert_scalar_character(key)
       assert_scalar_character(value)
       assert_scalar_positive_integer(expire)
       assert_scalar_positive_integer(period)
-      assert_scalar_logical(start)
-      assert_valid_timeout(timeout)
 
       if (expire <= period) {
         stop("expire must be longer than period")
       }
 
       private$config <- redux::redis_config(config = config)
+      if (private$config$scheme != "redis") {
+        stop("Only tcp redis connections are supported")
+      }
 
       private$key <- key
       private$key_signal <- heartbeat_key_signal(key)
@@ -51,92 +27,79 @@ heartbeat_ <- R6::R6Class(
 
       private$period <- as.integer(period)
       private$expire <- as.integer(expire)
-
-      private$timeout <- timeout
-
-      if (start) {
-        self$start()
-      }
     },
 
-    ##' @description Report if heartbeat process is running. This will be
-    ##' `TRUE` if the process has been started and has not stopped.
+    ## There is an issue here with _exactly_ what happens where we
+    ## have a situation where the heartbeat has been scheduled for
+    ## closure but it has not closed.  At some point the other thread
+    ## will clear out the pointer and we want to check that it has
+    ## been set to NULL.  So when doing the check for keep_going we
+    ## need to check that able to read safely.  There's a NULL check
+    ## there in the code but it seems unsafe at this point.  I don't
+    ## think this is super hard to get right and it only impacts the
+    ## keep_going bit so we don't have to lock when dealing with the
+    ## BLPOP (which could be fairly slow).
     is_running = function() {
-      if (is.null(private$process)) {
+      if (is.null(private$ptr)) {
         FALSE
       } else {
-        private$process$is_alive()
+        ## I don't know that this is sensible or not; if this returns
+        ## FALSE then it does not mean that the heartbeat is
+        ## *absolutely* running because it could have died in the
+        ## meantime and we don't check here for the key.  So this
+        ## probably needs expanding but it requires a better knowledge
+        ## of the real-life failure modes.
+        .Call(heartbeat_running, private$ptr)
       }
     },
 
-    ##' @description Start the heartbeat process. An error will be thrown
-    ##' if it is already running.
-    start = function() {
+    start = function(timeout = 10) {
       if (self$is_running()) {
-        stop(sprintf("Already running on key '%s'", private$key))
+        stop("Already running on key ", private$key)
       }
-
-      private$process <- heartbeat_process(
-        private$config, private$key, private$value,
-        private$period, private$expire)
-
-      con <- redux::hiredis(private$config)
-      wait_timeout("Did not start in time", private$timeout, function() {
-        if (!private$process$is_alive()) {
-          private$process$get_result()
-        }
-        con$EXISTS(private$key) == 0
-      })
-
+      assert_scalar_numeric(timeout)
+      private$ptr <- .Call(heartbeat_create,
+                           private$config$host,
+                           as.integer(private$config$port),
+                           private$config$password %||% "",
+                           as.integer(private$config$db %||% 0L),
+                           private$key, private$value, private$key_signal,
+                           private$expire, private$period, timeout)
       invisible(self)
     },
 
-    ##' @description Stop the heartbeat process
-    ##' @param wait Logical, indicating if we should wait until the
-    ##' heartbeat process terminates (should take only a fraction of a
-    ##' second)
-    stop = function(wait = TRUE) {
+    stop = function(wait = TRUE, timeout = 10) {
       assert_scalar_logical(wait)
-      if (!self$is_running()) {
-        stop(sprintf("Heartbeat not running on key '%s'", private$key))
+      assert_scalar_numeric(timeout)
+      if (timeout < 0) {
+        stop("timeout must be positive")
       }
-
-      con <- redux::hiredis(private$config)
-      con$RPUSH(private$key_signal, 0)
-
-      process <- private$process
-      private$process <- NULL
-
-      if (wait) {
-        wait_timeout("Did not stop in time", private$timeout, function()
-          process$is_alive())
-      }
-
-      invisible(self)
+      ret <- .Call(heartbeat_stop, private$ptr, FALSE, wait,
+                   as.numeric(timeout))
+      private$ptr <- NULL
+      ret
     },
 
-    ##' @description Format method, used by R6 to nicely print the object
-    ##' @param ... Additional arguments, currently ignored
-    format = function(...) {
-      c("<heartbeat>\n",
-        sprintf("  - running: %s", tolower(self$is_running())),
-        sprintf("  - key: %s", private$key),
-        sprintf("  - period: %d", private$period),
-        sprintf("  - expire: %d", private$expire),
-        sprintf("  - redis:\n%s",
-                paste0("      ", capture.output(print(private$config))[-1],
-                       collapse = "\n")))
+    print = function(...) {
+      cat("<heartbeat>\n")
+      cat(sprintf("  - running: %s\n", tolower(self$is_running())))
+      cat(sprintf("  - key: %s\n", private$key))
+      cat(sprintf("  - period: %d\n", private$period))
+      cat(sprintf("  - expire: %d\n", private$expire))
+      cat(sprintf("  - redis:\n%s\n",
+                  paste0("      ", capture.output(print(private$config))[-1],
+                         collapse = "\n")))
+      invisible(self)
     }
   ),
 
   private = list(
     config = NULL,
-    process = NULL,
+    ptr = NULL,
     key = NULL,
     key_signal = NULL,
     period = NULL,
     expire = NULL,
-    timeout = NULL,
     value = NULL
   ))
 
@@ -148,31 +111,33 @@ heartbeat_ <- R6::R6Class(
 ##' set `expire`) and another application can tell that this R
 ##' instance has died.
 ##'
+##' The heartbeat object has three methods:
+##'
+##' * `is_running()` which returns `TRUE` or
+##'   `FALSE` if the heartbeat is/is not running.
+##'
+##' * `start()` which starts a heartbeat
+##'
+##' * `stop()` which requests a stop for the heartbeat
+##'
+##' Heavily inspired by the `doRedis` package.
 ##' @title Create a heartbeat instance
-##'
 ##' @param key Key to use
-##'
 ##' @param period Timeout period (in seconds)
-##'
 ##' @param expire Key expiry time (in seconds)
-##'
 ##' @param value Value to store in the key.  By default it stores the
 ##'   expiry time, so the time since last heartbeat can be computed.
-##'
 ##' @param config Configuration parameters passed through to
 ##'   `redux::redis_config`.  Provide as either a named list or a
 ##'   `redis_config` object.  This allows host, port, password,
 ##'   db, etc all to be set.  Socket connections (i.e., using
 ##'   `path` to access Redis over a socket) are not currently
 ##'   supported.
-##'
 ##' @param start Should the heartbeat be started immediately?
-##'
 ##' @param timeout Time, in seconds, to wait for the heartbeat to
 ##'   appear.  It should generally appear very quickly (within a
 ##'   second unless your connection is very slow) so this can be
 ##'   generally left alone.
-##'
 ##' @export
 ##' @examples
 ##'
@@ -194,17 +159,16 @@ heartbeat_ <- R6::R6Class(
 ##'   # stop existing
 ##'   h$stop()
 ##'
-##'   Sys.sleep(2)
-##'   con$EXISTS(key) # 0
-##'
-##'   # This is required to close any processes opened by this
-##'   # example, normally you would not need this.
-##'   processx:::supervisor_kill()
+##'   # Sys.sleep(2)
+##'   # con$EXISTS(key) # 0
 ##' }
 heartbeat <- function(key, period, expire = 3 * period, value = expire,
                       config = NULL, start = TRUE, timeout = 10) {
-  heartbeat_$new(config, key, as.character(value), period, expire,
-                 start, timeout)
+  ret <- heartbeat_$new(config, key, as.character(value), period, expire)
+  if (start) {
+    ret$start(timeout)
+  }
+  ret
 }
 
 
@@ -237,38 +201,4 @@ heartbeat_send_signal <- function(con, key, signal) {
 
 heartbeat_key_signal <- function(key) {
   paste0(key, ":signal")
-}
-
-
-
-heartbeat_process <- function(config, key, value, period, expire) {
-  args <- list(config = config, key = key, value = value,
-               period = period, expire = expire, parent = Sys.getpid())
-  callr::r_bg(function(...) heartbeat_worker(...),
-              args = args, package = TRUE, supervise = TRUE)
-}
-
-
-
-heartbeat_worker <- function(config, key, value, period, expire, parent) {
-  con <- redux::hiredis(config)
-  con$SET(key, value)
-  on.exit(con$DEL(key))
-  key_signal <- heartbeat_key_signal(key)
-  con$DEL(key_signal)
-
-  repeat {
-    con$EXPIRE(key, expire)
-    ans <- con$BLPOP(key_signal, period)
-    if (!is.null(ans)) {
-      value <- ans[[2L]]
-      if (value %in% c(tools::SIGKILL, tools::SIGTERM)) {
-        con$DEL(c(key, key_signal))
-        tools::pskill(parent, value)
-      } else if (value == tools::SIGINT) {
-        tools::pskill(parent, value)
-      }
-      break
-    }
-  }
 }
