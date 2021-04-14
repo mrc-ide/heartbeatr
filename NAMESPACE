@@ -3,3 +3,4 @@
 export(heartbeat)
 export(heartbeat_send_signal)
 importFrom(R6,R6Class)
+useDynLib(heartbeatr, .registration = TRUE)
